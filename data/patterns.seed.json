@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "version": "1.0",
+    "note": "Machine-readable SeknuTo brand knowledge + self-updating prompt-fragment registry. Seeded from design-masterclass + seknuto-prompts. The 'variants' block is the learnable part (bandit)."
+  },
+
+  "locked_strings": {
+    "web": "SeknuTo.cz",
+    "phone": "730 588 372",
+    "region": "Dvůr Králové a okolí",
+    "tagline": "Staráme se o váš pozemek od A do Z.",
+    "proof": "Cena na míru · Kalkulace zdarma",
+    "tags": "Pozemky · Nemovitosti · Zahrady",
+    "hero_headline": "Sekáme. Kácíme. Čistíme.",
+    "cta_label": "ZAVOLEJTE",
+    "before_pill": "PŘED",
+    "after_pill": "PO"
+  },
+
+  "colors": {
+    "primary": "#3FA34D",
+    "dark_green": "#2d8840",
+    "forest": "#1e5a32",
+    "light_blade": "#66BB6A",
+    "light_accent": "#86d492",
+    "yellow": "#FFD54F",
+    "before_red": "#D32F2F",
+    "text_dark": "#1a1a1a",
+    "white": "#FFFFFF"
+  },
+
+  "diacritics": {
+    "Sekáme": "S-e-k-á-m-e (á acute)",
+    "Kácíme": "K-á-c-í-m-e (á + í acute)",
+    "Čistíme": "Č-i-s-t-í-m-e (Č caron + í acute)",
+    "Staráme": "á acute",
+    "váš": "á acute + š caron",
+    "Dvůr": "D-v-ů-r (ů RING above, not acute)",
+    "Králové": "á acute + é acute",
+    "okolí": "í acute",
+    "míru": "í acute",
+    "Napište": "N-a-p-i-š-t-e (š caron)",
+    "Čištění": "Č + š + ě + í",
+    "Stříhání": "ř + í + á + í",
+    "tújí": "ú ACUTE not ring, í acute",
+    "stromů": "s-t-r-o-m-ů (ů RING above, not acute)",
+    "pozemků": "p-o-z-e-m-k-ů (ů RING above, not acute)",
+    "Výsadba": "V-ý-s-a-d-b-a (ý acute)",
+    "Nezávazně": "á acute + ě caron",
+    "přímo": "ř caron + í acute",
+    "Vás": "á acute"
+  },
+
+  "common_misspellings": [
+    "Sekame", "Kacime", "Cistime", "Dvur", "Kralove", "Napiste",
+    "Cisteni", "Strihani", "tuji", "cerven", "stromu", "pozemku"
+  ],
+
+  "base_negative": [
+    "dimension labels", "px markers", "mm", "wireframe", "annotation boxes",
+    "duplicate logo", "duplicate phone", "two diagonals", "font names visible",
+    "extra yellow", "cartoon", "3D render", "lens flare",
+    "prices", "Kč", "per m2"
+  ],
+
+  "failure_log": [
+    {"id": "F1", "symptom": "placeholder braces rendered", "root_cause": "{{ }} reached model", "fix": "replace all {{}} before send", "negative": ["curly braces", "template placeholders"]},
+    {"id": "F5", "symptom": "duplicate PO badge", "root_cause": "element not locked to exactly ONE", "fix": "ELEMENT_COUNT_LOCK + negative", "negative": ["two PO badges", "duplicate PO circle"]},
+    {"id": "F6", "symptom": "letters spaced out", "root_cause": "'wide letter-spacing' misread", "fix": "single word letters touching", "negative": ["spaced letters", "V o l e j t e"]},
+    {"id": "F7", "symptom": "hacek on wrong letter", "root_cause": "no character breakdown", "fix": "inline breakdown per word", "negative": ["Ptrebujete", "wrong caron placement"]},
+    {"id": "F8", "symptom": "AI redrew customer photo", "root_cause": "img model reimagined reference", "fix": "nano-banana IMAGE refs + preserve", "negative": ["regenerated photo", "illustrated photo"]},
+    {"id": "F9", "symptom": "bottom dark zone too big", "root_cause": "message zone oversized", "fix": "dark zone <=25%", "negative": ["oversized bottom bar"]},
+    {"id": "F11", "symptom": "generic headline 'Hotovo'", "root_cause": "generic copy on hero", "fix": "service name is hero", "negative": ["Hotovo headline"]},
+    {"id": "F13", "symptom": "photo rotated 90 deg", "root_cause": "forced into fixed frame", "fix": "adaptive orientation, never rotate", "negative": ["rotated photo"]},
+    {"id": "F14", "symptom": "over-saturated grading", "root_cause": "no grading limit", "fix": "after +5% / before -10% max", "negative": ["oversaturated", "heavy filter"]}
+  ],
+
+  "variants": {
+    "opener": [
+      {"id": "opener_a", "text": "Create FINAL PRODUCTION print artwork ready to print directly. All specs below are INSTRUCTIONS to follow, never text to display. Show no dimension markers, px/mm labels, wireframe boxes, or annotation text.", "uses": 0, "score_sum": 0.0},
+      {"id": "opener_b", "text": "You are producing finished, print-ready artwork. Every instruction is a directive, not text to render. Do not draw any measurement labels, guides, or notes.", "uses": 0, "score_sum": 0.0}
+    ],
+    "hero_after_desc": [
+      {"id": "after_geo", "text": "AFTER area shows a RAZOR-STRAIGHT geometric result, dense uniform vibrant green, no dead brown patches, wide establishing shot showing the full scope of work.", "uses": 0, "score_sum": 0.0},
+      {"id": "after_clean", "text": "AFTER area shows a clean, freshly finished result in vibrant healthy green, uniform and tidy, full work visible end to end.", "uses": 0, "score_sum": 0.0}
+    ],
+    "hero_before_desc": [
+      {"id": "before_wild", "text": "BEFORE area shows a WILD IRREGULAR overgrown state with multiple dead brown patches, bumpy uneven growth, slightly desaturated.", "uses": 0, "score_sum": 0.0},
+      {"id": "before_neglect", "text": "BEFORE area shows a neglected overgrown state, brown and unkempt, slightly desaturated, same framing as the after.", "uses": 0, "score_sum": 0.0}
+    ],
+    "diagonal": [
+      {"id": "diag_strict", "text": "Exactly ONE diagonal cut at 42-45 degrees running bottom-left to top-right, with a thin #3FA34D green line along its edge. Never a second diagonal.", "uses": 0, "score_sum": 0.0}
+    ],
+    "cta_block": [
+      {"id": "cta_gradient", "text": "CTA panel: green gradient #3FA34D to #2d8840 spanning full width. Small caps 'ZAVOLEJTE', then '730 588 372' huge white Montserrat extra-bold, then 'SeknuTo.cz' below.", "uses": 0, "score_sum": 0.0},
+      {"id": "cta_forest", "text": "CTA panel: solid dark forest #1e5a32. Small caps 'ZAVOLEJTE', then '730 588 372' huge white heavy sans, then 'SeknuTo.cz' in yellow #FFD54F below.", "uses": 0, "score_sum": 0.0}
+    ]
+  }
+}

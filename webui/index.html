@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SeknuTo Forge</title>
+<style>
+  :root{--g:#3FA34D;--gd:#2d8840;--forest:#1e5a32;--y:#FFD54F;--ink:#1a1a1a;--mut:#666;--bg:#f4f5f2;--line:#e2e5df}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:var(--forest);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:12px}
+  header .dot{width:30px;height:30px;border-radius:8px;background:var(--g);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  header b{font-size:18px}header span{color:#bfe0c7;font-size:13px}
+  main{max-width:1120px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:380px 1fr;gap:20px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  h2{font-size:15px;margin:0 0 12px}
+  label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  textarea{min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .row{display:flex;gap:8px}.row>*{flex:1}
+  button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;font-weight:600;font:inherit}
+  .primary{background:var(--g);color:#fff}.primary:hover{background:var(--gd)}
+  .ghost{background:#fff;border:1px solid var(--line)}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:7px 12px;border:1px solid var(--line);border-radius:20px;background:#fff;font-size:13px;cursor:pointer}
+  .tab.on{background:var(--forest);color:#fff;border-color:var(--forest)}
+  .muted{color:var(--mut);font-size:12px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600}
+  .ok{background:#e7f4ea;color:var(--gd)}.bad{background:#fbe4e4;color:#b42318}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .thumb{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .thumb img{width:100%;height:150px;object-fit:cover;background:#eee}
+  .thumb .p{padding:8px}
+  .score{font-weight:800;font-size:20px}
+  .pill{display:inline-block;background:var(--y);color:var(--forest);border-radius:8px;padding:2px 8px;font-weight:700;font-size:12px}
+  pre{white-space:pre-wrap;word-break:break-word;background:#f7f8f5;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:340px;overflow:auto}
+  .hide{display:none}
+  .k{font-size:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="dot">S</div>
+  <div><b>SeknuTo Forge</b><br><span>generuj · boduj · uč se · SeknuTo.cz</span></div>
+</header>
+
+<main>
+  <!-- LEFT: build form -->
+  <section class="card">
+    <h2>Vytvořit materiál</h2>
+    <label>Formát</label>
+    <select id="format">
+      <option>DL</option><option>A5</option><option>A4</option><option selected>A3</option>
+      <option>banner_vertical</option><option>banner_horizontal</option><option>rollup</option><option>social</option>
+    </select>
+    <label>Styl (mód)</label>
+    <select id="mode">
+      <option value="B_sluzby" selected>B — Služby (diagonála + služby)</option>
+      <option value="A_transformace">A — Transformace (před/po)</option>
+      <option value="editorial_immersive">Editorial Immersive (house style, reálné foto)</option>
+    </select>
+    <label>Headline / služba (volitelné)</label>
+    <input id="headline" placeholder="Sekáme. Kácíme. Čistíme."/>
+    <label>Lokalita</label>
+    <input id="location" value="Dvůr Králové a okolí"/>
+    <label>Reference obrázky (URL, čárkou) — before, after, logo / hero, logo</label>
+    <textarea id="images" style="min-height:64px" placeholder="https://.../hero.jpg, https://.../logo.png"></textarea>
+    <label><input type="checkbox" id="autoeval" checked style="width:auto;margin-right:6px">Auto-kritika (vision)</label>
+    <div class="row" style="margin-top:12px">
+      <button class="ghost" onclick="preview()">Náhled promptu</button>
+      <button class="primary" onclick="generate()">Vygenerovat</button>
+    </div>
+    <p class="muted" id="status" style="margin-top:10px"></p>
+  </section>
+
+  <!-- RIGHT: tabs -->
+  <section>
+    <div class="tabs">
+      <div class="tab on" data-t="prompt" onclick="tab('prompt')">Prompt</div>
+      <div class="tab" data-t="result" onclick="tab('result')">Výsledek</div>
+      <div class="tab" data-t="gallery" onclick="tab('gallery');loadGallery()">Galerie</div>
+      <div class="tab" data-t="board" onclick="tab('board');loadBoard()">Leaderboard</div>
+      <div class="tab" data-t="know" onclick="tab('know');loadKnow()">Znalosti</div>
+    </div>
+
+    <div class="card pane" id="pane-prompt">
+      <h2>Sestavený prompt <button class="ghost" style="float:right;padding:5px 10px" onclick="copyPrompt()">Kopírovat</button></h2>
+      <pre id="promptOut" class="muted">Klikni „Náhled promptu" nebo „Vygenerovat".</pre>
+      <p class="muted" id="promptMeta"></p>
+    </div>
+
+    <div class="card pane hide" id="pane-result">
+      <h2>Výsledek</h2>
+      <div id="resultBox" class="muted">Zatím nic vygenerováno.</div>
+    </div>
+
+    <div class="card pane hide" id="pane-gallery">
+      <h2>Galerie generací</h2>
+      <div class="grid" id="galleryGrid"></div>
+    </div>
+
+    <div class="card pane hide" id="pane-board">
+      <h2>Leaderboard variant</h2>
+      <div id="boardOut" class="muted"></div>
+    </div>
+
+    <div class="card pane hide" id="pane-know">
+      <h2>Failure log + negativní termíny</h2>
+      <div id="knowOut" class="muted"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = ""; // same origin (served by FastAPI)
+let lastPrompt = "";
+
+function vars(){
+  const v={format:document.getElementById('format').value, mode:document.getElementById('mode').value,
+           location:document.getElementById('location').value};
+  const h=document.getElementById('headline').value.trim(); if(h)v.service_headline=h;
+  return v;
+}
+function imgs(){return document.getElementById('images').value.split(',').map(s=>s.trim()).filter(Boolean);}
+function tab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.dataset.t===t));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.add('hide'));
+  document.getElementById('pane-'+t).classList.remove('hide');}
+function setStatus(s){document.getElementById('status').textContent=s;}
+
+async function preview(){
+  setStatus('Sestavuji prompt…');
+  const r=await fetch(API+'/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(vars())});
+  const d=await r.json(); lastPrompt=d.prompt;
+  document.getElementById('promptOut').textContent=d.prompt;
+  document.getElementById('promptMeta').textContent=`aspect ${d.aspect} · model_hint ${d.model_hint} · QR ${d.show_qr}`;
+  tab('prompt'); setStatus('Prompt hotov (žádné náklady).');
+}
+function copyPrompt(){navigator.clipboard.writeText(lastPrompt||document.getElementById('promptOut').textContent);setStatus('Zkopírováno.');}
+
+async function generate(){
+  setStatus('Generuji na Replicate… (může trvat ~30–60 s)');
+  try{
+    const r=await fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({variables:vars(),image_urls:imgs(),auto_evaluate:document.getElementById('autoeval').checked})});
+    if(!r.ok){setStatus('Chyba: '+(await r.text()));return;}
+    const g=await r.json(); lastPrompt=g.prompt;
+    document.getElementById('promptOut').textContent=g.prompt;
+    renderResult(g); tab('result'); setStatus('Hotovo.');
+  }catch(e){setStatus('Chyba sítě: '+e.message);}
+}
+
+function checksHtml(c){if(!c)return'';return Object.entries(c).map(([k,v])=>
+  `<span class="badge ${v?'ok':'bad'}">${v?'✓':'✗'} ${k}</span>`).join(' ');}
+
+function renderResult(g){
+  const box=document.getElementById('resultBox');
+  box.innerHTML=`
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <img src="${g.output_url}" style="width:280px;border-radius:10px;border:1px solid var(--line)"/>
+      <div style="flex:1;min-width:240px">
+        <div class="score">${g.final_score??'—'} <span class="muted">/100</span></div>
+        <p class="muted">auto: ${g.auto_score??'—'} · id: ${g._id}</p>
+        <div>${checksHtml(g.auto_checks)}</div>
+        <p class="muted">Defekty: ${(g.auto_defects||[]).join(', ')||'žádné'}</p>
+        <label>Tvoje hodnocení (0–100)</label>
+        <div class="row">
+          <input type="number" id="hs" min="0" max="100" value="${Math.round(g.final_score||70)}"/>
+          <button class="primary" onclick="rate('${g._id}')">Uložit hodnocení</button>
+        </div>
+      </div>
+    </div>`;
+}
+async function rate(id){
+  const s=parseFloat(document.getElementById('hs').value);
+  const r=await fetch(API+'/rate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({generation_id:id,human_score:s})});
+  const g=await r.json(); renderResult(g); setStatus('Hodnocení uloženo — varianty přebodovány.');
+}
+
+async function loadGallery(){
+  const r=await fetch(API+'/generations'); const list=await r.json();
+  document.getElementById('galleryGrid').innerHTML=list.reverse().map(g=>`
+    <div class="thumb"><img src="${g.output_url}"/>
+      <div class="p"><b>${g.format||''}</b> <span class="muted">${g.mode||''}</span><br>
+      <span class="score" style="font-size:16px">${g.final_score??'—'}</span>
+      <button class="ghost" style="float:right;padding:4px 8px" onclick="quickRate('${g._id}')">Ohodnotit</button></div>
+    </div>`).join('')||'<p class="muted">Zatím žádné generace.</p>';
+}
+async function quickRate(id){const s=prompt('Hodnocení 0–100:');if(s!==null){await fetch(API+'/rate',{method:'POST',
+  headers:{'Content-Type':'application/json'},body:JSON.stringify({generation_id:id,human_score:parseFloat(s)})});loadGallery();}}
+
+async function loadBoard(){
+  const r=await fetch(API+'/leaderboard'); const b=await r.json();
+  document.getElementById('boardOut').innerHTML=Object.entries(b).map(([slot,vs])=>
+    `<div class="k"><b>${slot}</b><br>`+vs.map(v=>`<span class="pill">${v.mean}</span> ${v.id} <span class="muted">(${v.uses}×)</span>`).join(' &nbsp; ')+`</div>`).join('');
+}
+async function loadKnow(){
+  const r=await fetch(API+'/knowledge'); const k=await r.json();
+  document.getElementById('knowOut').innerHTML=
+    '<b>Failure log</b>'+k.failure_log.map(f=>`<div class="k">${f.id} — ${f.symptom} <span class="muted">→ ${f.fix}</span></div>`).join('')
+    +'<b style="display:block;margin-top:10px">Negative</b><p class="muted">'+k.base_negative.join(', ')+'</p>';
+}
+</script>
+</body>
+</html>

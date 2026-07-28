@@ -1,0 +1,13 @@
+# secrets / local env
+.env
+
+# runtime state (live copies the loop mutates — keep the seed, not these)
+data/patterns.json
+data/store.json
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
