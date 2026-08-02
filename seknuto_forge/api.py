@@ -26,7 +26,8 @@ _UI = Path(__file__).resolve().parent.parent / "webui" / "index.html"
 
 @app.get("/")
 def home():
-    return FileResponse(_UI)
+    # no-store so the browser never shows a stale cached dashboard after a git pull
+    return FileResponse(_UI, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
 class Variables(BaseModel):
