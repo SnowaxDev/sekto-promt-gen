@@ -71,6 +71,31 @@ def pick_variants(patterns: dict[str, Any], epsilon: float | None = None,
     return chosen
 
 
+def resolve_variants(patterns: dict[str, Any], group: str, fixed: dict[str, str]) -> dict[str, dict]:
+    """Resolve an explicit variant vector (slot -> id) for a series so every piece shares one
+    look. Missing slots fall back to the current best. Used to keep a campaign consistent."""
+    chosen: dict[str, dict] = {}
+    for slot, variants in patterns["variants"].items():
+        is_de = slot.startswith("de_")
+        if (group == "ab" and is_de) or (group == "de" and not is_de):
+            continue
+        vid = fixed.get(slot)
+        match = next((v for v in variants if v["id"] == vid), None)
+        chosen[slot] = match or max(variants, key=variant_mean)
+    return chosen
+
+
+def best_vector(patterns: dict[str, Any], group: str = "de") -> dict[str, str]:
+    """The current best variant per slot in a group — the consistent style a series locks onto."""
+    out: dict[str, str] = {}
+    for slot, variants in patterns["variants"].items():
+        is_de = slot.startswith("de_")
+        if (group == "ab" and is_de) or (group == "de" and not is_de):
+            continue
+        out[slot] = max(variants, key=variant_mean)["id"]
+    return out
+
+
 def credit_variants(patterns: dict[str, Any], chosen_ids: dict[str, str], score: float) -> None:
     """Attribute a generation's final score to the variants that produced it."""
     for slot, vid in chosen_ids.items():

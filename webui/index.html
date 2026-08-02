@@ -90,6 +90,10 @@
       <button class="primary" onclick="generate()">Vygenerovat</button>
     </div>
     <button class="primary" style="width:100%;margin-top:8px;background:var(--forest)" onclick="refine()">✨ Vylepšit automaticky (max 3×)</button>
+    <div class="row" style="margin-top:8px;align-items:center">
+      <input type="number" id="seriesCount" min="1" max="8" value="4" style="max-width:70px" title="počet příspěvků v sérii"/>
+      <button class="ghost" style="flex:2" onclick="series()">🎞️ Vygenerovat sérii (provázaný obsah)</button>
+    </div>
     <p class="muted" id="status" style="margin-top:10px"></p>
   </section>
 
@@ -207,6 +211,29 @@ function renderRefine(d){
     `<div style="margin-top:16px"><b>Průběh vylepšování (${d.iterations}×)</b>${hist}${disc}</div>`);
 }
 
+async function series(){
+  const n=parseInt(document.getElementById('seriesCount').value)||3;
+  setStatus('🎞️ Generuji sérii '+n+' provázaných příspěvků se stejným stylem… ('+n+' renderů, chvíli to potrvá)');
+  try{
+    const image_urls=await imgsAll();
+    const r=await fetch(API+'/series',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({variables:vars(),image_urls,count:n})});
+    if(!r.ok){setStatus('Chyba: '+(await r.text()));return;}
+    const d=await r.json(); renderSeries(d); tab('result');
+    setStatus('Série hotová — '+d.count+' příspěvků, jednotný styl.');
+  }catch(e){setStatus('Chyba sítě: '+e.message);}
+}
+function renderSeries(d){
+  document.getElementById('resultBox').innerHTML=
+    `<b>Série ${d.series_id} — ${d.count} příspěvků (jednotný, provázaný styl)</b>
+     <div class="grid" style="margin-top:10px">`+(d.slides||[]).map(s=>`
+      <div class="thumb"><img src="${s.output_url}"/>
+        <div class="p"><b>#${s.slide}</b> <span class="muted">${s.role||''}</span><br>
+        <span class="score" style="font-size:16px">${s.score!=null?Math.round(s.score):'—'}</span>
+        ${s.hard_fail?' <span class="badge bad">⛔</span>':''}
+        <button class="ghost" style="float:right;padding:4px 8px" onclick="quickRate('${s.id}')">Ohodnotit</button></div>
+      </div>`).join('')+`</div>`;
+}
 function checksHtml(c){if(!c)return'';return Object.entries(c).map(([k,v])=>
   `<span class="badge ${v?'ok':'bad'}">${v?'✓':'✗'} ${k}</span>`).join(' ');}
 

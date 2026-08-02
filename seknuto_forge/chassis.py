@@ -25,6 +25,9 @@ FORMAT_SPECS = {
     "og_banner":        {"aspect": "16:9",  "note": "OG/web banner 1920x1005, horizontal 55/45 split"},
 }
 
+# Print formats: domain + a (gray placeholder) QR are MANDATORY on every one of these.
+PRINT_FORMATS = ("DL", "A5", "A4", "A3", "banner_vertical", "banner_horizontal", "rollup")
+
 # Modes: A_transformace (before/after diagonal), B_sluzby (services + diagonal),
 # editorial_immersive (house style: full-bleed real photo, centered, glass pills),
 # dark_emerald (Dark Emerald v3 digital system: 5-layer canvas, headline ladder, glass components).
@@ -49,14 +52,17 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
     uses_photos = variables.get("uses_photos", mode in ("A_transformace", "B_sluzby"))
     location = variables.get("location", L["region"])
     headline = variables.get("service_headline", L["hero_headline"])
-    show_qr = fmt not in ("banner_horizontal", "banner_vertical")
+    # print formats ALWAYS carry a QR (gray placeholder) + the domain; digital never does
+    show_qr = fmt in PRINT_FORMATS
 
     if mode == "editorial_immersive":
         return _build_editorial(variables, patterns, spec)
     if mode == "dark_emerald":
         return _build_dark_emerald(variables, patterns, spec)
 
-    chosen = knowledge.pick_variants(patterns)
+    _fixed = variables.get("_fixed_axes")   # a series locks one wording vector for consistency
+    chosen = (knowledge.resolve_variants(patterns, "ab", _fixed) if _fixed
+              else knowledge.pick_variants(patterns))
     chosen_ids = {slot: v["id"] for slot, v in chosen.items()}
 
     # --- diacritics block (only for words present) ---
@@ -97,14 +103,23 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
         )
 
     qr = (
-        f"QR code bottom-right on white with caption 'Napište nám'." if show_qr else
+        "A GRAY PLACEHOLDER QR code (finder-pattern squares only, deliberately NOT a real "
+        "scannable code) on a small white card bottom-right, caption 'Napište nám'. "
+        "The real QR is composited later in print." if show_qr else
         "No QR code (too far to scan at banner distance)."
+    )
+    role = variables.get("series_role")
+    series_line = (
+        f"\n=== SERIES CONSISTENCY ===\nPart of a cohesive multi-piece series — role: {role}. "
+        "Keep EXACTLY the same visual style, colours, diagonal angle, logo lockup and layout as the "
+        "other pieces; only the headline/copy changes. Consistency across the set is mandatory.\n"
+        if role else ""
     )
 
     prompt = f"""{chosen['opener']['text']}
 Format: {fmt} ({spec['note']}). Aspect {spec['aspect']}. CMYK, print-ready.
 
-{photo_rules}{style_line}
+{photo_rules}{style_line}{series_line}
 === BRAND CHASSIS (identical across all formats) ===
 Logo top-left: rounded square {C['forest']} with four grass blades (2 white + 2 {C['light_blade']}
 growing up) + wordmark '{L['web']}' geometric sans-serif semibold, capital T mid-word.
@@ -118,7 +133,7 @@ Never invent colors.
 
 === ELEMENT COUNT LOCK ===
 Exactly 1 logo lockup (top-left), 1 diagonal (42-45°), 1 green edge line, 1 CTA panel,
-1 phone number, {'1 QR code' if show_qr else '0 QR codes'}, max 1 yellow accent. Never duplicate any element.
+1 phone number, {'1 QR code (gray placeholder, MANDATORY) + the domain SeknuTo.cz MANDATORY' if show_qr else '0 QR codes'}, max 1 yellow accent. Never duplicate any element.
 
 === ZONES top to bottom ===
 [ZONE 1] logo lockup + '{L['web']}'.
@@ -237,8 +252,11 @@ def _build_dark_emerald(variables, patterns, spec):
     ds = knowledge.load_design()
     L, T, B = patterns["locked_strings"], ds["tokens"], ds["banks"]
 
-    # learnable style axes (§14.2) — the bandit explores new style combinations and learns
-    chosen = knowledge.pick_variants(patterns, group="de")
+    # learnable style axes (§14.2) — the bandit explores new style combinations and learns.
+    # A series passes _fixed_axes so every piece locks onto ONE style for consistency.
+    fixed = variables.get("_fixed_axes")
+    chosen = (knowledge.resolve_variants(patterns, "de", fixed) if fixed
+              else knowledge.pick_variants(patterns, group="de"))
     chosen_ids = {slot: v["id"] for slot, v in chosen.items()}
     ax = lambda k, d="": (chosen[k]["text"] if k in chosen else d)
     accent_id = chosen.get("de_accent_usage", {}).get("id", "none")
@@ -276,6 +294,13 @@ def _build_dark_emerald(variables, patterns, spec):
     photo_treatment  = ax("de_photo_treatment", "Hero photo on the right, faded into the dark on the left.")
     accent_text      = ax("de_accent_usage", "No yellow anywhere on the canvas.")
     shaft_treatment  = ax("de_light_shaft", "")
+    role = variables.get("series_role")
+    series_line = (
+        f"\n[SERIES CONSISTENCY] Part of a cohesive multi-post series — role: {role}. Keep EXACTLY the "
+        "same dark emerald canvas, colours, ladder treatment, CTA style, logo position and layout as the "
+        "other posts in the set; only the copy changes. Visual consistency across the series is mandatory.\n"
+        if role else ""
+    )
 
     prompt = f"""[BLOCK 0 — PRODUCTION GUARD]
 You are producing FINAL PRODUCTION artwork, ready to publish without any editing. Every
@@ -327,7 +352,7 @@ glowing element on the canvas. Style: {cta_style}
 [SECTION 11 — CONTACT FOOTER] '{L['web']} · {phone}' — phone in heavy numerals, the second-largest element on the canvas.
 
 Keep at least 35% of the canvas empty (silence is part of the luxury). Nothing touches the edges.
-
+{series_line}
 [BLOCK 6 — DIACRITICS VERIFICATION TABLE]
 {dia}
 

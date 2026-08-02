@@ -103,6 +103,21 @@ glass components, one glowing CTA) · `A_transformace` (before/after) · `B_sluz
 
 Dark Emerald digital formats: `ig_post` (1:1), `ig_portrait` (4:5), `story` (9:16), `og_banner` (16:9).
 
+## Content series / campaigns (connected, consistent posts)
+
+`POST /series` (button **🎞️ Vygenerovat sérii**) generates a cohesive set — e.g. an IG carousel.
+The whole series **locks onto one style vector** (the current best per axis) so every piece looks
+identical in style; only the copy and a per-slide narrative **role** change (Hook → Služby → Důkaz →
+Výzva). Each slide carries a "series consistency" instruction and is stored with a shared `series_id`
++ `slide_index`. Pass `count` (1–8). Works for `dark_emerald` (digital) and the print modes.
+
+## Print rule: domain + QR always
+
+Every print format (`DL, A5, A4, A3, banner_vertical, banner_horizontal, rollup`) now **always**
+renders the `SeknuTo.cz` domain and a **gray-placeholder QR** (finder-pattern squares only, never a
+real scannable code — the real QR is composited in print, per brand rule #4). Digital formats never
+carry a QR.
+
 ## Style discovery (Dark Emerald learns new looks)
 
 The `dark_emerald` mode is not fixed — it has learnable **style axes** (§14.2): `de_ladder_treatment`,

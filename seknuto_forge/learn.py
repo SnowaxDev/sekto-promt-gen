@@ -6,6 +6,7 @@ retrieve():   warm-start a new request from the best past generation like it
 leaderboard(): which prompt variants are winning
 """
 from __future__ import annotations
+import uuid
 from typing import Any
 from . import chassis, generate, evaluate, knowledge, store, config
 
@@ -138,6 +139,70 @@ def _maybe_discover_style(variables, patterns, best) -> dict[str, Any] | None:
         return None
     vid = knowledge.add_variant(patterns, axis, text)
     return {"axis": axis, "id": vid, "text": text} if vid else None
+
+
+def _default_series_plan(design: dict[str, Any], count: int) -> list[dict[str, Any]]:
+    """A cohesive multi-post carousel plan: same style, a narrative role per slide."""
+    B = design["banks"]
+    lad = B["ladder"]
+    roles = [
+        {"series_role": "Hook — upoutání", "ladder": lad[0]},
+        {"series_role": "Služby — co děláme", "ladder": lad[1 % len(lad)], "chips": B["chips"][:3]},
+        {"series_role": "Důkaz — proč my", "ladder": lad[2 % len(lad)], "proof": B["proof"][0]},
+        {"series_role": "Výzva — ozvi se", "ladder": lad[3 % len(lad)],
+         "cta": B["cta"][0], "micro": B["micro"][0]},
+    ]
+    plan = []
+    for i in range(count):
+        r = dict(roles[i % len(roles)])
+        r["service_headline"] = " ".join(r["ladder"])   # so A/B print series vary too
+        plan.append(r)
+    return plan
+
+
+def series(variables: dict[str, Any], image_urls: list[str] | None = None, count: int = 3,
+           plan: list[dict[str, Any]] | None = None, auto_evaluate: bool = True) -> dict[str, Any]:
+    """Generate a cohesive, connected content set (e.g. an IG carousel). The whole series locks
+    onto ONE style vector so every piece looks consistent; only the copy/role changes per piece."""
+    count = max(1, min(int(count), 8))
+    patterns = knowledge.load_patterns()
+    design = knowledge.load_design()
+    db = store.get_store()
+    mode = variables.get("mode", "dark_emerald")
+
+    group = "de" if mode == "dark_emerald" else "ab"
+    fixed = knowledge.best_vector(patterns, group)          # the shared, proven style
+    plan = (plan or _default_series_plan(design, count))[:count]
+    series_id = uuid.uuid4().hex[:12]
+    slides: list[dict[str, Any]] = []
+
+    for idx, override in enumerate(plan):
+        v = {**variables, **override, "_fixed_axes": fixed}
+        built = chassis.build_prompt(v, patterns)
+        gen = generate.generate(built, image_urls=image_urls)
+        rec = store.new_generation(
+            format=variables.get("format"), mode=mode, variables=v, prompt=built["prompt"],
+            chosen_variant_ids=built["chosen_variant_ids"], input_images=image_urls or [],
+            output_url=gen["output_url"], model=gen["model"],
+            params={k: val for k, val in gen["params"].items() if k != "prompt"},
+            series_id=series_id, slide_index=idx + 1, series_role=override.get("series_role"),
+        )
+        if auto_evaluate:
+            crit = evaluate.critique(gen["output_url"], mode=mode)
+            rec.update(auto_score=crit["auto_score"], auto_checks=crit["checks"],
+                       auto_defects=crit["defects"], hard_fail=crit.get("hard_fail", False))
+            rec["final_score"] = evaluate.blend_final(crit["auto_score"], None)
+        _id = db.insert(rec)
+        rec["_id"] = _id
+        if rec.get("final_score") is not None:
+            knowledge.credit_variants(patterns, built["chosen_variant_ids"], rec["final_score"])
+        slides.append({"slide": idx + 1, "role": override.get("series_role"), "id": _id,
+                       "output_url": gen["output_url"], "score": rec.get("final_score"),
+                       "hard_fail": rec.get("hard_fail", False), "prompt": built["prompt"]})
+
+    _auto_promote(patterns, db)
+    knowledge.save_patterns(patterns)
+    return {"series_id": series_id, "count": len(slides), "style": fixed, "slides": slides}
 
 
 def rate(generation_id: str, human_score: float) -> dict[str, Any]:

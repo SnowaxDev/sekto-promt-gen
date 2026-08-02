@@ -56,6 +56,13 @@ class RefineReq(BaseModel):
     target: Optional[float] = None       # stop early at this score
 
 
+class SeriesReq(BaseModel):
+    variables: Variables
+    image_urls: list[str] = []
+    count: int = 3
+    auto_evaluate: bool = True
+
+
 class RateReq(BaseModel):
     generation_id: str
     human_score: float  # 0-100
@@ -84,6 +91,15 @@ def refine(req: RefineReq):
     try:
         return learn.refine(_vars(req.variables), req.image_urls or None,
                             req.max_iters, req.target)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.post("/series")
+def series(req: SeriesReq):
+    """Generate a cohesive, connected content set (e.g. an IG carousel), one consistent style."""
+    try:
+        return learn.series(_vars(req.variables), req.image_urls or None, req.count, None, req.auto_evaluate)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
