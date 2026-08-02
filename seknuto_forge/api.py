@@ -15,7 +15,7 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from . import chassis, learn, store, knowledge
 
 app = FastAPI(title="SeknuTo Forge", version="1.1")
@@ -30,6 +30,9 @@ def home():
 
 
 class Variables(BaseModel):
+    # extra="allow" lets Dark Emerald copy fields (ladder, chips, eyebrow, status,
+    # proof, body, micro, cta, chip_filled_index) pass through without listing each.
+    model_config = ConfigDict(extra="allow")
     format: str = "DL"
     mode: str = "B_sluzby"
     service_headline: Optional[str] = None

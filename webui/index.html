@@ -51,17 +51,32 @@
     <h2>Vytvořit materiál</h2>
     <label>Formát</label>
     <select id="format">
-      <option>DL</option><option>A5</option><option>A4</option><option selected>A3</option>
-      <option>banner_vertical</option><option>banner_horizontal</option><option>rollup</option><option>social</option>
+      <optgroup label="Dark Emerald (digital)">
+        <option value="ig_post">IG post 1:1</option>
+        <option value="ig_portrait">IG portrait 4:5</option>
+        <option value="story">Story 9:16</option>
+        <option value="og_banner">OG / web banner 16:9</option>
+      </optgroup>
+      <optgroup label="Tisk / letáky">
+        <option>DL</option><option>A5</option><option>A4</option><option selected>A3</option>
+        <option>banner_vertical</option><option>banner_horizontal</option><option>rollup</option><option>social</option>
+      </optgroup>
     </select>
     <label>Styl (mód)</label>
-    <select id="mode">
+    <select id="mode" onchange="toggleDE()">
+      <option value="dark_emerald">Dark Emerald v3 (pro digital — 5 vrstev, ladder, glass)</option>
       <option value="B_sluzby" selected>B — Služby (diagonála + služby)</option>
       <option value="A_transformace">A — Transformace (před/po)</option>
       <option value="editorial_immersive">Editorial Immersive (house style, reálné foto)</option>
     </select>
     <label>Headline / služba (volitelné)</label>
     <input id="headline" placeholder="Sekáme. Kácíme. Čistíme."/>
+    <div id="deFields" class="hide">
+      <label>Headline ladder — 3 řádky (čárkou)</label>
+      <input id="ladder" placeholder="ZAHRADA, NA KTERÉ, ZÁLEŽÍ."/>
+      <label>Chipy služeb — 2–4 (čárkou)</label>
+      <input id="chips" placeholder="Sekání trávy, Kácení stromů, Střih keřů a tújí"/>
+    </div>
     <label>Lokalita</label>
     <input id="location" value="Dvůr Králové a okolí"/>
     <label>Reference obrázky (URL, čárkou) — before, after, logo / hero, logo</label>
@@ -120,11 +135,18 @@
 const API = ""; // same origin (served by FastAPI)
 let lastPrompt = "";
 
+function toggleDE(){document.getElementById('deFields').classList.toggle('hide',document.getElementById('mode').value!=='dark_emerald');}
 function vars(){
   const v={format:document.getElementById('format').value, mode:document.getElementById('mode').value,
            location:document.getElementById('location').value};
   const h=document.getElementById('headline').value.trim(); if(h)v.service_headline=h;
   if(document.getElementById('styleref').checked) v.style_ref=true;
+  if(v.mode==='dark_emerald'){
+    const lad=document.getElementById('ladder').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(lad.length) v.ladder=lad;
+    const ch=document.getElementById('chips').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(ch.length) v.chips=ch;
+  }
   return v;
 }
 function readFileAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
@@ -194,6 +216,7 @@ function renderResult(g){
       <img src="${g.output_url}" style="width:280px;border-radius:10px;border:1px solid var(--line)"/>
       <div style="flex:1;min-width:240px">
         <div class="score">${g.final_score??'—'} <span class="muted">/100</span></div>
+        ${g.hard_fail?'<div class="badge bad" style="margin:4px 0">⛔ HARD FAIL — nepublikovat (viz vady)</div>':(g.final_score>=92?'<div class="badge ok" style="margin:4px 0">★ baseline kvalita</div>':'')}
         <p class="muted">auto: ${g.auto_score??'—'} · id: ${g._id}</p>
         <div>${checksHtml(g.auto_checks)}</div>
         <p class="muted">Defekty: ${(g.auto_defects||[]).join(', ')||'žádné'}</p>
@@ -235,6 +258,7 @@ async function loadKnow(){
     '<b>Failure log</b>'+k.failure_log.map(f=>`<div class="k">${f.id} — ${f.symptom} <span class="muted">→ ${f.fix}</span></div>`).join('')
     +'<b style="display:block;margin-top:10px">Negative</b><p class="muted">'+k.base_negative.join(', ')+'</p>';
 }
+toggleDE();
 </script>
 </body>
 </html>

@@ -26,9 +26,9 @@ def run_once(variables: dict[str, Any], image_urls: list[str] | None = None,
     )
 
     if auto_evaluate:
-        crit = evaluate.critique(gen["output_url"])
+        crit = evaluate.critique(gen["output_url"], mode=variables.get("mode", "B_sluzby"))
         rec.update(auto_score=crit["auto_score"], auto_checks=crit["checks"],
-                   auto_defects=crit["defects"])
+                   auto_defects=crit["defects"], hard_fail=crit.get("hard_fail", False))
         rec["final_score"] = evaluate.blend_final(crit["auto_score"], None)
 
     db = store.get_store()
@@ -79,10 +79,12 @@ def refine(variables: dict[str, Any], image_urls: list[str] | None = None,
             refine_iter=i + 1,
         )
 
-        crit = evaluate.critique(gen["output_url"])
+        crit = evaluate.critique(gen["output_url"], mode=variables.get("mode", "B_sluzby"))
+        hard = crit.get("hard_fail", False)
         rec.update(auto_score=crit["auto_score"], auto_checks=crit["checks"],
-                   auto_defects=crit["defects"])
+                   auto_defects=crit["defects"], hard_fail=hard)
         rec["final_score"] = evaluate.blend_final(crit["auto_score"], None)
+        rec["is_baseline"] = (rec["final_score"] is not None and rec["final_score"] >= 92 and not hard)
 
         _id = db.insert(rec)
         rec["_id"] = _id
@@ -90,17 +92,24 @@ def refine(variables: dict[str, Any], image_urls: list[str] | None = None,
         _auto_promote(patterns, db)
         knowledge.save_patterns(patterns)
 
-        score = rec["final_score"]
-        history.append({"iter": i + 1, "id": _id, "score": round(score, 1) if score is not None else None,
-                        "output_url": gen["output_url"], "defects": crit["defects"]})
-        if best is None or (score is not None and score > (best.get("final_score") or -1)):
+        score = rec["final_score"] or 0.0
+        history.append({"iter": i + 1, "id": _id, "score": round(score, 1),
+                        "hard_fail": hard, "output_url": gen["output_url"], "defects": crit["defects"]})
+        # a passing (non-hard-fail) result always beats a hard-failed one, then by score
+        def _rank(r): return (0 if r.get("hard_fail") else 1, r.get("final_score") or -1)
+        if best is None or _rank(rec) > _rank(best):
             best = rec
 
-        if score is not None and score >= target:
-            break
-        if i < max_iters - 1:  # rewrite the prompt for the next attempt
-            prompt_override = evaluate.improve_prompt(
-                built["prompt"], crit["checks"], crit["defects"], patterns)
+        if not hard and score >= target:
+            break  # good enough — stop spending
+        if i < max_iters - 1:
+            # §13.3 action ladder: hard fail or <65 -> throw away this wording, let the
+            # bandit pick a fresh variant vector next pass; 65-79 -> one targeted prompt fix.
+            if hard or score < 65:
+                prompt_override = None
+            else:
+                prompt_override = evaluate.improve_prompt(
+                    built["prompt"], crit["checks"], crit["defects"], patterns)
 
     return {"best": best, "history": history, "iterations": len(history)}
 

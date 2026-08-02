@@ -72,3 +72,6 @@ REFINE_TARGET_SCORE = float(os.getenv("REFINE_TARGET_SCORE", "88"))
 
 PATTERNS_SEED = DATA_DIR / "patterns.seed.json"
 PATTERNS_LIVE = DATA_DIR / "patterns.json"  # mutable working copy the loop updates
+
+# Machine-readable slice of the Dark Emerald design system (docs/DESIGN_SYSTEM.md).
+DESIGN_SYSTEM = DATA_DIR / "design_system.json"

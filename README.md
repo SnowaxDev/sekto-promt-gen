@@ -97,7 +97,21 @@ python -m seknuto_forge.cli leaderboard
 `DL`, `A5`, `A4`, `A3`, `banner_vertical`, `banner_horizontal`, `rollup`, `social` — each maps to the
 right aspect ratio and reading-distance rules. QR auto-drops on distant banners.
 
-Modes: `A_transformace` (before/after) · `B_sluzby` (services) · `editorial_immersive` (house style, real photo).
+Modes: `dark_emerald` (pro digital — Dark Emerald v3 system: 5-layer canvas, headline ladder,
+glass components, one glowing CTA) · `A_transformace` (before/after) · `B_sluzby` (services) ·
+`editorial_immersive` (house style, real photo).
+
+Dark Emerald digital formats: `ig_post` (1:1), `ig_portrait` (4:5), `story` (9:16), `og_banner` (16:9).
+
+## Brand & design system
+
+`docs/DESIGN_SYSTEM.md` is the authoritative **Dark Emerald v3.0** brand identity; its
+machine-readable slice (`data/design_system.json`) drives the `dark_emerald` chassis mode and
+the critic. In that mode the critic scores against the design system's weighted **§13 QA rubric**
+with HARD FAIL rules (a single diacritics error, a visible price, a duplicated element or a second
+glowing element auto-fails), and `refine` follows the §13 action ladder: HARD FAIL / <65 → throw
+the wording away and let the bandit pick a fresh vector; 65–79 → one targeted fix; ≥88 → stop; ≥92
+→ baseline quality. Grounding (google/image search) is off for brand assets per the design system.
 
 ## Auto-refine (self-improving until it's good)
 

@@ -9,6 +9,14 @@ A Python package `seknuto_forge/` + a single-file web UI (`webui/index.html`) + 
 knowledge file (`data/patterns.seed.json`). It runs fully on the user's PC. Storage is a
 local JSON file unless `MONGO_URI` is set. See `ALGORITHM.md` for the exact flow.
 
+## Brand & design authority — read before any visual
+`docs/DESIGN_SYSTEM.md` is the **Dark Emerald v3.0** master brand & design identity — the
+single source of truth for how SeknuTo.cz looks (tokens, 5-layer canvas, headline ladder,
+14 components, QA rubric, negative prompt, failure log). Its machine-readable slice lives in
+`data/design_system.json` (tokens, copy banks, §13 rubric, master negative, diacritics). The
+`dark_emerald` chassis mode builds prompts from it; `evaluate.critique` scores against its
+§13 rubric with HARD FAIL rules. Never contradict it; when a request conflicts, surface it.
+
 ## Non-negotiable brand rules (never violate, never "improve away")
 1. **No fixed prices.** Customer-facing output shows only `Cena na míru` / `Kalkulace ZDARMA`. Never Kč, never per m².
 2. **Locked strings** come from `data/patterns.seed.json → locked_strings`. Never invent alternatives: web `SeknuTo.cz` (capital T), phone `730 588 372`, region `Dvůr Králové a okolí`, tagline `Staráme se o váš pozemek od A do Z.`, hero `Sekáme. Kácíme. Čistíme.`

@@ -19,11 +19,16 @@ FORMAT_SPECS = {
     "banner_horizontal":{"aspect": "16:9",  "note": "wide PVC banner, read from 10-30m, 3-5 words max, no QR"},
     "rollup":           {"aspect": "9:16",  "note": "roll-up, bottom 150mm hidden in stand"},
     "social":           {"aspect": "9:16",  "note": "vertical social ad 1080x1920, emoji allowed"},
+    "ig_post":          {"aspect": "1:1",   "note": "Instagram post 1080x1080, dark emerald"},
+    "ig_portrait":      {"aspect": "4:5",   "note": "Instagram portrait 1080x1350, dark emerald"},
+    "story":            {"aspect": "9:16",  "note": "IG/FB story 1080x1920, keep UI-safe top 9% / bottom 12%"},
+    "og_banner":        {"aspect": "16:9",  "note": "OG/web banner 1920x1005, horizontal 55/45 split"},
 }
 
 # Modes: A_transformace (before/after diagonal), B_sluzby (services + diagonal),
-# editorial_immersive (house style: full-bleed real photo, centered, glass pills).
-VALID_MODES = ("A_transformace", "B_sluzby", "editorial_immersive")
+# editorial_immersive (house style: full-bleed real photo, centered, glass pills),
+# dark_emerald (Dark Emerald v3 digital system: 5-layer canvas, headline ladder, glass components).
+VALID_MODES = ("A_transformace", "B_sluzby", "editorial_immersive", "dark_emerald")
 
 
 def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -48,6 +53,8 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
 
     if mode == "editorial_immersive":
         return _build_editorial(variables, patterns, spec)
+    if mode == "dark_emerald":
+        return _build_dark_emerald(variables, patterns, spec)
 
     chosen = knowledge.pick_variants(patterns)
     chosen_ids = {slot: v["id"] for slot, v in chosen.items()}
@@ -220,4 +227,113 @@ NEGATIVE PROMPT: {', '.join(negatives)}."""
         "negative": negatives,
         "model_hint": "image",
         "show_qr": False,
+    }
+
+
+def _build_dark_emerald(variables, patterns, spec):
+    """Dark Emerald v3.0 — the pro digital system (docs/DESIGN_SYSTEM.md §11): five-layer
+    emerald canvas, three-tier headline ladder, glass components, one glowing CTA. Deterministic:
+    tokens/negatives/rubric come from data/design_system.json; only the copy varies (from banks)."""
+    ds = knowledge.load_design()
+    L, T, B = patterns["locked_strings"], ds["tokens"], ds["banks"]
+
+    status   = variables.get("status", B["status"][0])
+    eyebrow  = variables.get("eyebrow", B["eyebrow"][0])
+    chips    = variables.get("chips", B["chips"][:3])
+    filled   = int(variables.get("chip_filled_index", 1))
+    ladder   = variables.get("ladder", B["ladder"][0])
+    proof    = variables.get("proof", B["proof"][0])
+    body     = variables.get("body", ["Sekání, kácení stromů, živé ploty, výsadba."])
+    micro    = variables.get("micro", B["micro"][0])
+    cta      = variables.get("cta", B["cta"][0])
+    phone    = L["phone"]
+    location = variables.get("location", L["region"])
+
+    ladder = list(ladder)[:3]
+    while len(ladder) < 3:
+        ladder.append("")
+    filled = max(0, min(filled, len(chips) - 1))
+
+    strings = (["'" + L["web"] + "'", "'" + status + "'", "'" + eyebrow + "'"]
+               + [f"'{c}'" for c in chips]
+               + [f"'{l}'" for l in ladder if l]
+               + ["'" + proof + "'"] + [f"'{b}'" for b in body]
+               + ["'" + micro + "'", "'" + cta + "'", "'" + phone + "'"])
+    chip_list = " | ".join(f"'{c}'" + (" (FILLED, gradient)" if i == filled else " (outline)")
+                           for i, c in enumerate(chips))
+    dia = "\n".join(f"{w} = {b}" for w, b in ds["diacritics"].items())
+    negatives = ds["negative_master"] + ", " + ", ".join(patterns["common_misspellings"])
+
+    prompt = f"""[BLOCK 0 — PRODUCTION GUARD]
+You are producing FINAL PRODUCTION artwork, ready to publish without any editing. Every
+specification below is an INSTRUCTION for you to follow, NOT text to display. Render ZERO
+technical annotations, dimension markers, px/mm labels, wireframe boxes, zone names, layer
+names, font names, or construction lines.
+
+[BLOCK 1 — CANVAS & SYSTEM]
+Format: {spec['note']} (aspect {spec['aspect']}). SeknuTo.cz "Dark Emerald" brand system.
+Build the background bottom to top, exactly these five layers:
+ 1. Radial emerald gradient, light centre upper-right: {T['canvas']['emerald_600']} into
+    {T['canvas']['emerald_800']} into {T['canvas']['emerald_900']} into near-black {T['canvas']['void']} at the edges. Never a flat colour.
+ 2. Very faint technical grid of thin white lines at ~3.5% opacity, evenly spaced.
+ 3. EXACTLY ONE soft volumetric light shaft from the upper-right corner, angled down-left,
+    pale green-white, low opacity. Never two shafts.
+ 4. Radial vignette darkening all four edges.
+ 5. EXACTLY FOUR thin green corner brackets {T['brand']['green_500_primary']} at 65% opacity, one in
+    each corner, L-shaped outlines only — never two, never filled.
+
+[BLOCK 2 — REFERENCE IMAGES]
+IMAGE 1 = SeknuTo.cz logo. Place as-is. NEVER redraw, restyle or reinterpret it (capital T mid-word).
+IMAGE 2 (if provided) = the real brand worker photo. Preserve his face, clothing and pose exactly;
+apply only +5% saturation / +3% contrast. Never regenerate the person. Blend the photo into the dark
+canvas with a left-to-dark fade and a bottom scrim — no hard rectangular edge. Never rotate the photo.
+
+[BLOCK 3 — RENDER ONLY THESE EXACT STRINGS]
+{' | '.join(strings)}
+No other text may appear anywhere on the canvas.
+
+[BLOCK 4 — ELEMENT COUNT LOCK]
+Exactly 1 logo lockup · exactly 1 status pill · exactly 1 headline ladder · exactly 1 glass proof
+card · exactly 1 green CTA button (the ONLY glowing element) · exactly 4 corner brackets · exactly 1
+light shaft · exactly {len(chips)} service chips ({chip_list}). Any element appearing twice is a failure.
+Yellow accent used 0 times here. No QR (digital).
+
+[BLOCK 5 — CANVAS BUILD, TOP TO BOTTOM]
+[SECTION 1 — BRAND LOCKUP, upper-left] IMAGE 1 logo + '{L['web']}' in a dark glass pill with a hairline border.
+[SECTION 2 — STATUS PILL, upper-right] '{status}' with a small pulsing green dot {T['brand']['green_400_bright']}.
+[SECTION 3 — EYEBROW LINE] '{eyebrow}' — first part uppercase tracked {T['brand']['green_200_light']}, place '·' divider then location in muted white.
+[SECTION 4 — SERVICE CHIPS] {chip_list}. Outline chips = hairline green border; the FILLED chip uses the CTA gradient. Never more than 4.
+[SECTION 5 — HEADLINE LADDER] three stacked uppercase lines in condensed geometric extra-bold sans,
+lines almost touching (tight leading): line 1 '{ladder[0]}' in faint translucent white rgba(255,255,255,0.30);
+line 2 '{ladder[1]}' in pure white; line 3 '{ladder[2]}' in brand green {T['brand']['green_500_primary']} ending with a full stop. Left-aligned.
+[SECTION 6 — HERO PHOTO, right side] IMAGE 2 worker, golden-hour rim light, shallow depth, faded into the dark on the left.
+[SECTION 7 — GLASS PROOF CARD] frosted dark glass card, backdrop blur, hairline green border: '{proof}' (gold stars {T['accent']['star']} if a rating). Never over a face.
+[SECTION 8 — ACCENT RULE + BODY] a 4px vertical green rule {T['brand']['green_500_primary']} left of: {' / '.join(body)}.
+[SECTION 9 — MICRO CTA LINE] '{micro}' small, above the button.
+[SECTION 10 — PRIMARY CTA BUTTON] full-width rounded button, gradient {T['gradient']['cta_button']}, soft
+green outer glow, thin light highlight along the top inner edge, white bold centred label '{cta}'. This is the ONLY glowing element.
+[SECTION 11 — CONTACT FOOTER] '{L['web']} · {phone}' — phone in heavy numerals, the second-largest element on the canvas.
+
+Keep at least 35% of the canvas empty (silence is part of the luxury). Nothing touches the edges.
+
+[BLOCK 6 — DIACRITICS VERIFICATION TABLE]
+{dia}
+
+[BLOCK 7 — MUST NEVER DO]
+Never redraw the logo · never duplicate any element · never render font names · never render dimension
+numbers · never show prices or Kč · never add a second glowing element · never use yellow more than once ·
+never place letters of a Czech word apart · never rotate the input photos · never apply heavy filters or
+lens flare · never translate the text to English · never a white background.
+
+NEGATIVE PROMPT: {negatives}."""
+
+    return {
+        "prompt": prompt.strip(),
+        "chosen_variant_ids": {},   # deterministic; bandit variant-axes are a later step
+        "aspect": spec["aspect"],
+        "negative": [negatives],
+        "model_hint": "image",
+        "show_qr": False,
+        "google_search": False,     # §11.1 — grounding off for brand assets
+        "image_search": False,
     }

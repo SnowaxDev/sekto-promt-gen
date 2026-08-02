@@ -37,38 +37,70 @@ def _score_from_checks(score: int, checks: dict[str, bool]) -> float:
     return round(0.5 * score + 0.5 * checklist, 1)
 
 
-def critique(image_url: str) -> dict[str, Any]:
-    """Return {auto_score, checks, defects}. Requires ANTHROPIC_API_KEY + web access
-    to fetch the image bytes."""
-    import anthropic, urllib.request
+def _rubric_dark_emerald(design: dict[str, Any]) -> str:
+    """Build the §13 rubric instruction from the machine-readable design system."""
+    r = design["rubric"]
+    crit = "\n".join(f'    "{c["key"]}": <bool>,   // w{c["weight"]} — {c["desc"]}'
+                     for c in r["criteria"])
+    hard = "; ".join(r["hard_fails"])
+    return (
+        'You are the QA critic for SeknuTo.cz "Dark Emerald" artwork (design system v3). '
+        'Judge ONLY what you see. Return STRICT JSON, no prose, no fences:\n'
+        "{\n"
+        '  "score": <0-100 holistic>,\n'
+        '  "checks": {\n' + crit + "\n  },\n"
+        '  "hard_fail": <bool>,   // true if ANY of: ' + hard + "\n"
+        '  "defects": [ "<short lowercase defect>", ... ]\n'
+        "}\n"
+        "A single Czech diacritics error is an automatic hard_fail. Deduct hard for duplicated "
+        "unique elements, a second glowing element, any visible price, or English text."
+    )
 
-    with urllib.request.urlopen(image_url) as r:
-        img_bytes = r.read()
-    media = "image/png" if image_url.lower().endswith(".png") else "image/jpeg"
+
+def critique(image_url: str, mode: str = "B_sluzby") -> dict[str, Any]:
+    """Return {auto_score, checks, defects, hard_fail}. dark_emerald mode is scored against
+    the weighted §13 rubric; other modes use the diagonal checklist. Requires ANTHROPIC_API_KEY."""
+    import anthropic, urllib.request
+    from . import knowledge
+
+    if image_url.startswith("data:"):
+        header, _, b64data = image_url.partition(",")
+        img_bytes = base64.b64decode(b64data)
+        media = "image/png" if "png" in header else "image/jpeg"
+    else:
+        with urllib.request.urlopen(image_url) as r:
+            img_bytes = r.read()
+        media = "image/png" if image_url.lower().endswith(".png") else "image/jpeg"
     b64 = base64.standard_b64encode(img_bytes).decode()
+
+    design = knowledge.load_design()
+    rubric = _rubric_dark_emerald(design) if mode == "dark_emerald" else RUBRIC
 
     client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     msg = client.messages.create(
-        model=config.CRITIC_MODEL,
-        max_tokens=700,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
-                {"type": "text", "text": RUBRIC},
-            ],
-        }],
+        model=config.CRITIC_MODEL, max_tokens=900,
+        messages=[{"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
+            {"type": "text", "text": rubric},
+        ]}],
     )
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
     text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
     data = json.loads(text)
-
     checks = data.get("checks", {})
-    return {
-        "auto_score": _score_from_checks(int(data.get("score", 0)), checks),
-        "checks": checks,
-        "defects": [d.strip().lower() for d in data.get("defects", [])],
-    }
+    defects = [d.strip().lower() for d in data.get("defects", [])]
+
+    if mode == "dark_emerald":
+        defs = design["rubric"]["criteria"]
+        auto = float(sum(c["weight"] for c in defs if checks.get(c["key"])))
+        hard = bool(data.get("hard_fail")) or any(
+            (not checks.get(c["key"])) and c["hard_fail_if_false"] for c in defs)
+    else:
+        auto = _score_from_checks(int(data.get("score", 0)), checks)
+        hard = bool(data.get("hard_fail")) or not checks.get("diacritics_ok", True) \
+            or not checks.get("no_technical_labels", True)
+
+    return {"auto_score": round(auto, 1), "checks": checks, "defects": defects, "hard_fail": hard}
 
 
 def blend_final(auto_score: float | None, human_score: float | None) -> float | None:

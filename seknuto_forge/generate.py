@@ -27,8 +27,10 @@ def generate(built: dict[str, Any], image_urls: list[str] | None = None,
             "prompt": built["prompt"],
             "aspect_ratio": built["aspect"],
             "resolution": resolution,        # 4K
-            "google_search": True,
-            "image_search": True,
+            # grounding: the Dark Emerald mode turns it off (design system §11.1 —
+            # it confuses brand assets); other modes keep it on. Default on.
+            "google_search": built.get("google_search", True),
+            "image_search": built.get("image_search", True),
             "output_format": output_format,  # jpg
         }
         # image_input is optional (schema default []); only send it when we

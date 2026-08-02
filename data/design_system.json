@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "system": "Dark Emerald",
+    "version": "3.0",
+    "source": "docs/DESIGN_SYSTEM.md",
+    "note": "Machine-readable slice of the SeknuTo Master Design & Brand Identity System. chassis + evaluate read this. Human-readable authority stays in docs/DESIGN_SYSTEM.md."
+  },
+
+  "tokens": {
+    "canvas": {
+      "void": "#060D09", "emerald_900": "#0A1F14", "emerald_800": "#0F2C1C",
+      "emerald_700": "#143823", "emerald_600": "#17422A", "charcoal": "#1a1a1a"
+    },
+    "brand": {
+      "green_700_forest": "#1E5A32", "green_600_dark": "#2d8840", "green_500_primary": "#3FA34D",
+      "green_400_bright": "#4FBF5E", "green_300_blade": "#66BB6A", "green_200_light": "#86D492"
+    },
+    "accent": {"yellow": "#FFD54F", "star": "#FFC93C", "red_before": "#D32F2F", "whatsapp": "#25D366"},
+    "gradient": {
+      "canvas_radial": "radial emerald gradient, light centre upper-right: #17422A -> #0F2C1C -> #0A1F14 -> #060D09",
+      "cta_button": "linear 135deg #4FBF5E -> #3FA34D -> #2E8B41"
+    }
+  },
+
+  "banks": {
+    "status": ["Přijímáme objednávky", "NÁBOR 2026", "Volné termíny", "Sezóna 2026"],
+    "eyebrow": [
+      "PROFESIONÁLNÍ PÉČE O ZAHRADU · Dvůr Králové a okolí",
+      "SPRÁVCE POZEMKŮ A NEMOVITOSTÍ · Dvůr Králové a okolí"
+    ],
+    "ladder": [
+      ["ZAHRADA", "NA KTERÉ", "ZÁLEŽÍ."],
+      ["POZEMEK", "KTERÝ", "DÝCHÁ."],
+      ["PRÁCE", "KTEROU", "NEUVIDÍTE."],
+      ["ZAROSTLÉ", "DNES", "HOTOVO."]
+    ],
+    "chips": [
+      "Sekání trávy", "Kácení stromů", "Střih keřů a tújí", "Čištění pozemků",
+      "Hrubé čištění pozemků", "Realizace zahrad", "Pravidelná údržba", "VIP servis",
+      "Odvoz bioodpadu", "Tlakové mytí", "Do 48 h"
+    ],
+    "proof": [
+      "20+ spokojených zákazníků", "Hodnocení na Google ★★★★★",
+      "Cena na míru · Kalkulace zdarma", "Foto report po každé zakázce"
+    ],
+    "micro": ["Pošli foto zahrady — nabídka ZDARMA 📸", "Napište nám", "Ozvi se →"],
+    "cta": ["Zavolat & domluvit prohlídku", "Chci nezávaznou poptávku", "ZAVOLEJTE 730 588 372"]
+  },
+
+  "diacritics": {
+    "Dvůr": "D-v-ů-r (ů has a RING above, not an acute) — never Dvur",
+    "Králové": "K-r-á-l-o-v-é (á acute + é acute) — never Kralove",
+    "ZÁLEŽÍ": "Z-Á-L-E-Ž-Í (Á acute, Ž caron, Í acute) — never ZALEZI",
+    "KTERÉ": "K-T-E-R-É (É acute) — never KTERE",
+    "KTERÝ": "K-T-E-R-Ý (Ý acute)",
+    "DÝCHÁ": "D-Ý-C-H-Á (Ý acute + Á acute)",
+    "NEUVIDÍTE": "N-E-U-V-I-D-Í-T-E (Í acute)",
+    "ZAROSTLÉ": "Z-A-R-O-S-T-L-É (É acute)",
+    "PÉČE": "P-É-Č-E (É acute + Č caron)",
+    "PROFESIONÁLNÍ": "á acute + í acute",
+    "POZEMKŮ": "ů RING — never pozemku",
+    "tújí": "t-ú-j-í (ú has an ACUTE, not a ring) — never tuji",
+    "keřů": "ř caron + ů RING",
+    "Čištění": "Č-i-š-t-ě-n-í (Č caron, š caron, ě caron, í acute) — never Cisteni",
+    "Střih": "S-t-ř-i-h (ř caron) — never Strih",
+    "údržba": "ú ACUTE + ž caron",
+    "zákazníků": "á + í + ů RING — never zakazniku",
+    "spokojených": "ý acute — never spokojenych",
+    "Napište": "š caron — never Napiste",
+    "nezávaznou": "á acute",
+    "Pošli": "š caron",
+    "zdarma": "no diacritics but keep lowercase after middle dot"
+  },
+
+  "rubric": {
+    "target_publish": 80,
+    "target_baseline": 92,
+    "criteria": [
+      {"key": "diacritics", "weight": 15, "hard_fail_if_false": true, "desc": "every Czech word correct; one wrong accent is a hard fail"},
+      {"key": "brand_recognisable", "weight": 12, "hard_fail_if_false": false, "desc": "dark emerald + corner brackets + lockup + headline ladder present"},
+      {"key": "text_clean", "weight": 10, "hard_fail_if_false": false, "desc": "no artefacts, no deformed or doubled letters"},
+      {"key": "headline_ladder", "weight": 10, "hard_fail_if_false": false, "desc": "three tiers, correct colours (ghost/white/green), full stop at end"},
+      {"key": "colour_fidelity", "weight": 10, "hard_fail_if_false": false, "desc": "hues match tokens, no foreign colour"},
+      {"key": "zone_proportions", "weight": 10, "hard_fail_if_false": false, "desc": "Z3 largest, Z5 >= 14%, Z1+Z2 <= 22%"},
+      {"key": "cta_dominance", "weight": 10, "hard_fail_if_false": false, "desc": "exactly one glowing CTA, phone legible at 2 m"},
+      {"key": "element_count", "weight": 8, "hard_fail_if_false": false, "desc": "no duplicates, chips <= 4, text blocks <= 6"},
+      {"key": "photo_integrity", "weight": 8, "hard_fail_if_false": false, "desc": "person not redrawn, correct orientation, blended into dark"},
+      {"key": "layout_breathing", "weight": 7, "hard_fail_if_false": false, "desc": ">= 35% empty space, nothing touches edges"}
+    ],
+    "hard_fails": [
+      "any diacritics error", "visible technical annotation (px, mm, ZONE, font name)",
+      "any concrete price", "duplicated unique element (logo, CTA, proof card)",
+      "redrawn or distorted logo", "yellow used more than once",
+      "second glowing element besides the CTA", "text translated to English"
+    ],
+    "thresholds": {
+      "92-100": "publish + set as new baseline for this format",
+      "80-91": "publish",
+      "65-79": "one targeted iteration (fix exactly one thing)",
+      "0-64": "discard, regenerate with a different variant vector"
+    }
+  },
+
+  "negative_master": "dimension labels visible, px measurements, mm labels, zone names visible, section headers visible, layer names, font names visible, Poppins text, Montserrat text, wireframe boxes, annotation text, ruler marks, construction lines, guide lines, draft marks, measurement arrows, lorem ipsum, placeholder brackets, curly braces, duplicate logo, two logos, duplicate CTA button, two buttons, duplicate proof card, two status pills, more than four corner brackets, two light shafts, second glowing element, multiple yellow elements, redrawn logo, distorted logo, wrong logo colours, extra grass blades, missing Czech diacritics, ZALEZI, KTERE, Dvur, Kralove, tuji, Cisteni, Strihani, Pťřebujete, Napiste, pozemku without ring, stromu without ring, zakazniku, letters spaced apart in Czech words, V o l e j t e, visible prices, Kč amounts, per square metre pricing, discount badges, stock watermark, getty watermark, shutterstock, lens flare, heavy HDR, cartoon style, 3D render look, illustration style, oversaturated neon green, blue sky dominant background, white background, smiling at camera, more than two people, rotated photo, mirrored text, blurry text, pixelated text, compression artifacts, low resolution, Comic Sans, Times New Roman, Arial, serif fonts"
+}

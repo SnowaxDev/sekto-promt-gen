@@ -28,6 +28,18 @@ def load_patterns() -> dict[str, Any]:
     return _load(config.PATTERNS_LIVE)
 
 
+_DESIGN_CACHE: dict[str, Any] | None = None
+
+
+def load_design() -> dict[str, Any]:
+    """Load the machine-readable Dark Emerald design system (tokens, banks, rubric,
+    master negative). Cached — it's read-only reference, not learned state."""
+    global _DESIGN_CACHE
+    if _DESIGN_CACHE is None:
+        _DESIGN_CACHE = _load(config.DESIGN_SYSTEM)
+    return _DESIGN_CACHE
+
+
 def save_patterns(data: dict[str, Any]) -> None:
     config.PATTERNS_LIVE.parent.mkdir(parents=True, exist_ok=True)
     with open(config.PATTERNS_LIVE, "w", encoding="utf-8") as f:
