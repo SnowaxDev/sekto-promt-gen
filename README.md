@@ -66,6 +66,7 @@ Serves the UI at `/` and the JSON endpoints below.
 |---|---|
 | `POST /prompt` | assemble a prompt, generate nothing (cost 0 — preview) |
 | `POST /generate` | build + generate + auto-critique + store |
+| `POST /refine` | auto-improve loop: generate → critique → fix prompt → regenerate, keep best |
 | `POST /rate` | attach a human 0–100 score to a generation |
 | `GET /best?format=DL&mode=B_sluzby` | best exemplar (warm start) |
 | `GET /leaderboard` | which prompt variants are winning |
@@ -97,6 +98,26 @@ python -m seknuto_forge.cli leaderboard
 right aspect ratio and reading-distance rules. QR auto-drops on distant banners.
 
 Modes: `A_transformace` (before/after) · `B_sluzby` (services) · `editorial_immersive` (house style, real photo).
+
+## Auto-refine (self-improving until it's good)
+
+The **✨ Vylepšit automaticky** button (endpoint `POST /refine`) runs a bounded hill-climb:
+
+1. build + generate on nano-banana-2, 2. auto-critique → score + defects,
+3. if below `REFINE_TARGET_SCORE` (default 88), Claude rewrites the prompt to kill exactly
+   those defects — **brand-safely** (a guard rejects any rewrite that drops a locked string
+   or introduces a price), 4. regenerate. Repeat up to `REFINE_MAX_ITERS` (default 3, hard-
+   capped at 8). The **best** result is kept, every iteration is stored and credits the
+   variant bandit, and the winner becomes the warm-start exemplar for next time.
+
+> Each iteration is one paid Replicate render — keep `REFINE_MAX_ITERS` low to control cost.
+
+## Reference / style images from your PC
+
+The dashboard's file picker reads images locally and sends them as data URIs, so you don't
+need to host anything. Tick **"Poslední obrázek je stylová reference"** to have the model
+match the look (composition, grading, mood) of the last image while still obeying every
+brand rule. For modes A/B pass before/after/logo; for editorial pass the real team photo + logo.
 
 ## Extending
 

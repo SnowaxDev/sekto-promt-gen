@@ -66,11 +66,15 @@
     <input id="location" value="Dvůr Králové a okolí"/>
     <label>Reference obrázky (URL, čárkou) — before, after, logo / hero, logo</label>
     <textarea id="images" style="min-height:64px" placeholder="https://.../hero.jpg, https://.../logo.png"></textarea>
+    <label>…nebo nahraj obrázky z PC (before/after/logo, nebo styl)</label>
+    <input type="file" id="files" accept="image/*" multiple style="padding:6px"/>
+    <label><input type="checkbox" id="styleref" style="width:auto;margin-right:6px">Poslední obrázek je <b>stylová reference</b> (napodob jeho styl)</label>
     <label><input type="checkbox" id="autoeval" checked style="width:auto;margin-right:6px">Auto-kritika (vision)</label>
     <div class="row" style="margin-top:12px">
       <button class="ghost" onclick="preview()">Náhled promptu</button>
       <button class="primary" onclick="generate()">Vygenerovat</button>
     </div>
+    <button class="primary" style="width:100%;margin-top:8px;background:var(--forest)" onclick="refine()">✨ Vylepšit automaticky (max 3×)</button>
     <p class="muted" id="status" style="margin-top:10px"></p>
   </section>
 
@@ -120,9 +124,17 @@ function vars(){
   const v={format:document.getElementById('format').value, mode:document.getElementById('mode').value,
            location:document.getElementById('location').value};
   const h=document.getElementById('headline').value.trim(); if(h)v.service_headline=h;
+  if(document.getElementById('styleref').checked) v.style_ref=true;
   return v;
 }
-function imgs(){return document.getElementById('images').value.split(',').map(s=>s.trim()).filter(Boolean);}
+function readFileAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
+// combine pasted URLs + files uploaded from the PC (sent as data URIs Replicate can fetch)
+async function imgsAll(){
+  const urls=document.getElementById('images').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const files=[...document.getElementById('files').files];
+  const datas=await Promise.all(files.map(readFileAsDataURL));
+  return urls.concat(datas);
+}
 function tab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.dataset.t===t));
   document.querySelectorAll('.pane').forEach(p=>p.classList.add('hide'));
   document.getElementById('pane-'+t).classList.remove('hide');}
@@ -141,13 +153,35 @@ function copyPrompt(){navigator.clipboard.writeText(lastPrompt||document.getElem
 async function generate(){
   setStatus('Generuji na Replicate… (může trvat ~30–60 s)');
   try{
+    const image_urls=await imgsAll();
     const r=await fetch(API+'/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({variables:vars(),image_urls:imgs(),auto_evaluate:document.getElementById('autoeval').checked})});
+      body:JSON.stringify({variables:vars(),image_urls,auto_evaluate:document.getElementById('autoeval').checked})});
     if(!r.ok){setStatus('Chyba: '+(await r.text()));return;}
     const g=await r.json(); lastPrompt=g.prompt;
     document.getElementById('promptOut').textContent=g.prompt;
     renderResult(g); tab('result'); setStatus('Hotovo.');
   }catch(e){setStatus('Chyba sítě: '+e.message);}
+}
+
+async function refine(){
+  setStatus('✨ Vylepšuji automaticky — až 3 renderování + kritika. Může to trvat pár minut, nezavírej okno…');
+  try{
+    const image_urls=await imgsAll();
+    const r=await fetch(API+'/refine',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({variables:vars(),image_urls})});
+    if(!r.ok){setStatus('Chyba: '+(await r.text()));return;}
+    const d=await r.json(); renderRefine(d); tab('result');
+    setStatus('Hotovo — vybrána nejlepší z '+d.iterations+' verzí.');
+  }catch(e){setStatus('Chyba sítě: '+e.message);}
+}
+function renderRefine(d){
+  const g=d.best||{}; lastPrompt=g.prompt||lastPrompt;
+  if(g.prompt)document.getElementById('promptOut').textContent=g.prompt;
+  renderResult(g);
+  const hist=(d.history||[]).map(h=>
+    `<div class="k">#${h.iter} — skóre <b>${h.score??'—'}</b> ${(h.defects&&h.defects.length)?'· vady: '+h.defects.join(', '):'· bez vad'} · <a href="${h.output_url}" target="_blank">obrázek</a></div>`).join('');
+  document.getElementById('resultBox').insertAdjacentHTML('beforeend',
+    `<div style="margin-top:16px"><b>Průběh vylepšování (${d.iterations}×)</b>${hist}</div>`);
 }
 
 function checksHtml(c){if(!c)return'';return Object.entries(c).map(([k,v])=>

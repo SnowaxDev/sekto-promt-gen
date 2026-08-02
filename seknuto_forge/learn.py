@@ -44,6 +44,67 @@ def run_once(variables: dict[str, Any], image_urls: list[str] | None = None,
     return rec
 
 
+def refine(variables: dict[str, Any], image_urls: list[str] | None = None,
+           max_iters: int | None = None, target: float | None = None) -> dict[str, Any]:
+    """Auto-improve loop: generate -> critique -> Claude fixes the prompt to kill the
+    reported defects (brand-safely) -> regenerate. Keeps the best result. Stops when the
+    score hits `target` or after `max_iters` renders (hard-capped — each render costs money).
+
+    Every iteration is stored and credits the variant bandit, so the library keeps learning
+    across runs; the best result is what warm-start (retrieve) will reuse next time.
+    Returns {best, history, iterations}.
+    """
+    max_iters = config.REFINE_MAX_ITERS if max_iters is None else int(max_iters)
+    max_iters = max(1, min(max_iters, 8))  # never runaway on cost
+    target = config.REFINE_TARGET_SCORE if target is None else float(target)
+
+    patterns = knowledge.load_patterns()
+    db = store.get_store()
+    history: list[dict[str, Any]] = []
+    best: dict[str, Any] | None = None
+    prompt_override: str | None = None
+
+    for i in range(max_iters):
+        built = chassis.build_prompt(variables, patterns)
+        if prompt_override:
+            built["prompt"] = prompt_override
+
+        gen = generate.generate(built, image_urls=image_urls)
+        rec = store.new_generation(
+            format=variables.get("format"), mode=variables.get("mode"),
+            variables=variables, prompt=built["prompt"],
+            chosen_variant_ids=built["chosen_variant_ids"],
+            input_images=image_urls or [], output_url=gen["output_url"],
+            model=gen["model"], params={k: v for k, v in gen["params"].items() if k != "prompt"},
+            refine_iter=i + 1,
+        )
+
+        crit = evaluate.critique(gen["output_url"])
+        rec.update(auto_score=crit["auto_score"], auto_checks=crit["checks"],
+                   auto_defects=crit["defects"])
+        rec["final_score"] = evaluate.blend_final(crit["auto_score"], None)
+
+        _id = db.insert(rec)
+        rec["_id"] = _id
+        knowledge.credit_variants(patterns, built["chosen_variant_ids"], rec["final_score"])
+        _auto_promote(patterns, db)
+        knowledge.save_patterns(patterns)
+
+        score = rec["final_score"]
+        history.append({"iter": i + 1, "id": _id, "score": round(score, 1) if score is not None else None,
+                        "output_url": gen["output_url"], "defects": crit["defects"]})
+        if best is None or (score is not None and score > (best.get("final_score") or -1)):
+            best = rec
+
+        if score is not None and score >= target:
+            break
+        if i < max_iters - 1:  # rewrite the prompt for the next attempt
+            prompt_override = evaluate.improve_prompt(
+                built["prompt"], crit["checks"], crit["defects"], patterns)
+
+    return {"best": best, "history": history, "iterations": len(history)}
+
+
 def rate(generation_id: str, human_score: float) -> dict[str, Any]:
     """Ground-truth a generation. Re-blends final score and re-credits variants
     (removing the earlier auto-only credit, adding the blended one)."""

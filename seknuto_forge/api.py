@@ -36,12 +36,20 @@ class Variables(BaseModel):
     location: Optional[str] = None
     date: Optional[str] = None
     uses_photos: Optional[bool] = None
+    style_ref: Optional[bool] = None  # last image is a style reference to match
 
 
 class GenerateReq(BaseModel):
     variables: Variables
     image_urls: list[str] = []
     auto_evaluate: bool = True
+
+
+class RefineReq(BaseModel):
+    variables: Variables
+    image_urls: list[str] = []
+    max_iters: Optional[int] = None      # hard-capped in learn.refine
+    target: Optional[float] = None       # stop early at this score
 
 
 class RateReq(BaseModel):
@@ -63,6 +71,16 @@ def generate(req: GenerateReq):
     try:
         return learn.run_once(_vars(req.variables), req.image_urls or None, req.auto_evaluate)
     except Exception as e:  # surface Replicate/Anthropic errors cleanly
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.post("/refine")
+def refine(req: RefineReq):
+    """Auto-improve loop: generate -> critique -> fix prompt -> regenerate, keep best."""
+    try:
+        return learn.refine(_vars(req.variables), req.image_urls or None,
+                            req.max_iters, req.target)
+    except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
 

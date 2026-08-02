@@ -66,6 +66,14 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
         "=== REFERENCE IMAGE ===\nIMAGE 1 = SeknuTo.cz logo. Do not invent extra photos.\n"
     )
 
+    style_line = (
+        "\n=== STYLE REFERENCE ===\n"
+        "The LAST reference image is a STYLE reference. Match its overall composition energy, "
+        "color grading, lighting mood and typographic feel. Do NOT copy its text, logos or people "
+        "— obey every SeknuTo brand rule, locked string, single diagonal and one-yellow limit below.\n"
+        if variables.get("style_ref") else ""
+    )
+
     if mode == "A_transformace":
         hero = (
             f"[ZONE 3 HERO, dominant] {chosen['diagonal']['text']} "
@@ -89,7 +97,7 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
     prompt = f"""{chosen['opener']['text']}
 Format: {fmt} ({spec['note']}). Aspect {spec['aspect']}. CMYK, print-ready.
 
-{photo_rules}
+{photo_rules}{style_line}
 === BRAND CHASSIS (identical across all formats) ===
 Logo top-left: rounded square {C['forest']} with four grass blades (2 white + 2 {C['light_blade']}
 growing up) + wordmark '{L['web']}' geometric sans-serif semibold, capital T mid-word.
@@ -155,6 +163,11 @@ def _build_editorial(variables, patterns, spec):
     location = variables.get("location", L["region"])
     dia = "; ".join(f"{w}: {b}" for w, b in patterns["diacritics"].items())
     pill_lines = " | ".join(f"'{p}'" for p in pills)
+    style_line = (
+        "\n=== STYLE REFERENCE ===\nThe LAST reference image is a STYLE reference: match its "
+        "color grading, lighting mood and layout feel, while keeping IMAGE 1's real people/scene "
+        "and every brand rule below.\n" if variables.get("style_ref") else ""
+    )
 
     prompt = f"""Create a FINAL PRODUCTION vertical 9:16 advertising poster (4K) for Czech garden
 service SeknuTo.cz, editorial immersive house style. Finished artwork — render NO dimension
@@ -166,7 +179,7 @@ Preserve the real people, faces, uniforms, tools and scene exactly — never reg
 illustrate, or restyle them. Apply only a mild grade (+4% saturation, +3% contrast) and a soft
 dark gradient at the very top for text legibility. The customer must recognise the actual team.
 IMAGE 2 = SeknuTo.cz logo (green square, 4 grass blades). Use as-is, do not redraw.
-
+{style_line}
 === BRAND COLORS (locked) ===
 {C['primary']} primary green, {C['forest']} forest, {C['light_blade']} light blade,
 {C['yellow']} yellow (used EXACTLY ONCE = CTA label), white, {C['text_dark']} near-black.

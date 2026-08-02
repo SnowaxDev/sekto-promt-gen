@@ -79,3 +79,58 @@ def blend_final(auto_score: float | None, human_score: float | None) -> float | 
         return float(human_score)
     w = config.HUMAN_WEIGHT
     return round(w * human_score + (1 - w) * auto_score, 1)
+
+
+def _brand_safe(candidate: str, original: str, patterns: dict[str, Any]) -> bool:
+    """Fail-safe guard on a rewritten prompt: it must not DROP any locked string that the
+    original carried (mode-specific — editorial has no phone, mode A has PŘED/PO pills, etc.)
+    and must not introduce prices. Enforces CLAUDE.md even if the LLM slips."""
+    for val in patterns["locked_strings"].values():
+        if val and val in original and val not in candidate:
+            return False
+    # Only scan the POSITIVE part — the negative/never-do sections legitimately
+    # name Kč / per m2 as things to avoid, so they must not trip the guard.
+    positive = candidate.split("=== MUST NEVER DO ===")[0].split("NEGATIVE PROMPT:")[0].lower()
+    banned = ["kč", "czk", " per m2", "/m2", "za m2", "cena od", "cena:"]
+    return not any(b in positive for b in banned)
+
+
+IMPROVE_SYS = """You are a prompt engineer for SeknuTo.cz print artwork. You are given a
+production image prompt and the auto-critic's failed checks + defects for the image it
+produced. Rewrite the prompt so those SPECIFIC defects are fixed.
+
+HARD RULES you must never break (rewrite fails otherwise):
+- Keep EVERY locked string exactly: web 'SeknuTo.cz', phone '730 588 372',
+  region 'Dvůr Králové a okolí', tagline, hero headline — verbatim, with diacritics.
+- Never add prices (no Kč, no per m2). Only 'Cena na míru' / 'Kalkulace zdarma'.
+- Exactly one yellow (#FFD54F) accent. Exactly one 42-45° diagonal with a #3FA34D edge (modes A/B).
+- Keep the DIACRITICS block and the NEGATIVE PROMPT. Colors only from the locked palette.
+- Do not invent new sections; tighten wording to remove the reported defects.
+Return ONLY the full improved prompt text — no commentary, no markdown fences."""
+
+
+def improve_prompt(prompt: str, checks: dict[str, bool], defects: list[str],
+                   patterns: dict[str, Any]) -> str:
+    """Ask Claude to rewrite the prompt to fix the critic's findings, brand-safely.
+    Returns the improved prompt, or the original if the rewrite is unsafe/unavailable."""
+    import anthropic
+
+    failed = [k for k, v in (checks or {}).items() if not v]
+    task = (
+        f"FAILED CHECKS: {', '.join(failed) or 'none'}\n"
+        f"DEFECTS: {', '.join(defects) or 'none'}\n\n"
+        f"CURRENT PROMPT:\n{prompt}"
+    )
+    try:
+        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model=config.CRITIC_MODEL, max_tokens=2000, system=IMPROVE_SYS,
+            messages=[{"role": "user", "content": task}],
+        )
+        improved = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+        improved = re.sub(r"^```(\w+)?|```$", "", improved, flags=re.MULTILINE).strip()
+    except Exception:
+        return prompt  # no key / API error -> keep the working prompt
+
+    # brand-safety gate: only accept the rewrite if it still obeys the locked rules
+    return improved if (improved and _brand_safe(improved, prompt, patterns)) else prompt

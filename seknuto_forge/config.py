@@ -64,5 +64,11 @@ DEFECT_WINDOW = int(os.getenv("DEFECT_WINDOW", "20"))
 # final = HUMAN_WEIGHT*human + (1-HUMAN_WEIGHT)*auto   (auto used alone if no human)
 HUMAN_WEIGHT = float(os.getenv("HUMAN_WEIGHT", "0.7"))
 
+# --- Auto-refine loop (generate -> critique -> Claude fixes the prompt -> regenerate) ---
+# Hard cap on renders per refine run (each render costs money on Replicate).
+REFINE_MAX_ITERS = int(os.getenv("REFINE_MAX_ITERS", "3"))
+# Stop early once the auto-critic score reaches this target.
+REFINE_TARGET_SCORE = float(os.getenv("REFINE_TARGET_SCORE", "88"))
+
 PATTERNS_SEED = DATA_DIR / "patterns.seed.json"
 PATTERNS_LIVE = DATA_DIR / "patterns.json"  # mutable working copy the loop updates
