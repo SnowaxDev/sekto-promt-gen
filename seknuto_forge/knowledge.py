@@ -52,12 +52,17 @@ def variant_mean(v: dict[str, Any]) -> float:
     return (v["score_sum"] / v["uses"]) if v["uses"] else 60.0
 
 
-def pick_variants(patterns: dict[str, Any], epsilon: float | None = None) -> dict[str, dict]:
-    """Choose one variant per slot. Best mean by default; with prob epsilon,
-    explore a random alternative so the loop keeps gathering evidence."""
+def pick_variants(patterns: dict[str, Any], epsilon: float | None = None,
+                  group: str = "ab") -> dict[str, dict]:
+    """Choose one variant per slot. Best mean by default; with prob epsilon, explore a random
+    alternative so the loop keeps discovering. `group` scopes the slots: "ab" = print modes
+    (opener, cta_block, …); "de" = Dark Emerald style axes (slots prefixed "de_")."""
     eps = config.EXPLORE_EPSILON if epsilon is None else epsilon
     chosen: dict[str, dict] = {}
     for slot, variants in patterns["variants"].items():
+        is_de = slot.startswith("de_")
+        if (group == "ab" and is_de) or (group == "de" and not is_de):
+            continue
         if len(variants) == 1 or random.random() >= eps:
             best = max(variants, key=variant_mean)
         else:
@@ -74,6 +79,22 @@ def credit_variants(patterns: dict[str, Any], chosen_ids: dict[str, str], score:
                 v["uses"] += 1
                 v["score_sum"] += float(score)
                 break
+
+
+def add_variant(patterns: dict[str, Any], slot: str, text: str) -> str | None:
+    """Append a newly-discovered variant to a slot (deduped, capped). Returns its id or None.
+    New variants start unseen (optimistic prior) so the bandit will try them before judging."""
+    text = (text or "").strip()
+    pool = patterns["variants"].get(slot)
+    if not text or pool is None:
+        return None
+    if len(pool) >= config.DE_MAX_VARIANTS_PER_AXIS:
+        return None
+    if any(v["text"].strip().lower() == text.lower() for v in pool):
+        return None
+    vid = f"{slot}_disc_{int(time.time())}_{len(pool)}"
+    pool.append({"id": vid, "text": text, "uses": 0, "score_sum": 0.0})
+    return vid
 
 
 def maybe_promote_defect(patterns: dict[str, Any], recent_defects: list[str]) -> list[str]:

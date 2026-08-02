@@ -237,6 +237,13 @@ def _build_dark_emerald(variables, patterns, spec):
     ds = knowledge.load_design()
     L, T, B = patterns["locked_strings"], ds["tokens"], ds["banks"]
 
+    # learnable style axes (§14.2) — the bandit explores new style combinations and learns
+    chosen = knowledge.pick_variants(patterns, group="de")
+    chosen_ids = {slot: v["id"] for slot, v in chosen.items()}
+    ax = lambda k, d="": (chosen[k]["text"] if k in chosen else d)
+    accent_id = chosen.get("de_accent_usage", {}).get("id", "none")
+    yellow_n = 0 if accent_id == "none" else 1
+
     status   = variables.get("status", B["status"][0])
     eyebrow  = variables.get("eyebrow", B["eyebrow"][0])
     chips    = variables.get("chips", B["chips"][:3])
@@ -264,6 +271,12 @@ def _build_dark_emerald(variables, patterns, spec):
     dia = "\n".join(f"{w} = {b}" for w, b in ds["diacritics"].items())
     negatives = ds["negative_master"] + ", " + ", ".join(patterns["common_misspellings"])
 
+    ladder_treatment = ax("de_ladder_treatment", "line 1 faint white, line 2 white, line 3 green #3FA34D, full stop.")
+    cta_style        = ax("de_cta_style", "full-width rounded button with a soft glow.")
+    photo_treatment  = ax("de_photo_treatment", "Hero photo on the right, faded into the dark on the left.")
+    accent_text      = ax("de_accent_usage", "No yellow anywhere on the canvas.")
+    shaft_treatment  = ax("de_light_shaft", "")
+
     prompt = f"""[BLOCK 0 — PRODUCTION GUARD]
 You are producing FINAL PRODUCTION artwork, ready to publish without any editing. Every
 specification below is an INSTRUCTION for you to follow, NOT text to display. Render ZERO
@@ -277,7 +290,7 @@ Build the background bottom to top, exactly these five layers:
     {T['canvas']['emerald_800']} into {T['canvas']['emerald_900']} into near-black {T['canvas']['void']} at the edges. Never a flat colour.
  2. Very faint technical grid of thin white lines at ~3.5% opacity, evenly spaced.
  3. EXACTLY ONE soft volumetric light shaft from the upper-right corner, angled down-left,
-    pale green-white, low opacity. Never two shafts.
+    pale green-white, low opacity. {shaft_treatment} Never two shafts.
  4. Radial vignette darkening all four edges.
  5. EXACTLY FOUR thin green corner brackets {T['brand']['green_500_primary']} at 65% opacity, one in
     each corner, L-shaped outlines only — never two, never filled.
@@ -296,22 +309,21 @@ No other text may appear anywhere on the canvas.
 Exactly 1 logo lockup · exactly 1 status pill · exactly 1 headline ladder · exactly 1 glass proof
 card · exactly 1 green CTA button (the ONLY glowing element) · exactly 4 corner brackets · exactly 1
 light shaft · exactly {len(chips)} service chips ({chip_list}). Any element appearing twice is a failure.
-Yellow accent used 0 times here. No QR (digital).
+Yellow accent used {yellow_n} time(s) here: {accent_text} No QR (digital).
 
 [BLOCK 5 — CANVAS BUILD, TOP TO BOTTOM]
 [SECTION 1 — BRAND LOCKUP, upper-left] IMAGE 1 logo + '{L['web']}' in a dark glass pill with a hairline border.
 [SECTION 2 — STATUS PILL, upper-right] '{status}' with a small pulsing green dot {T['brand']['green_400_bright']}.
 [SECTION 3 — EYEBROW LINE] '{eyebrow}' — first part uppercase tracked {T['brand']['green_200_light']}, place '·' divider then location in muted white.
 [SECTION 4 — SERVICE CHIPS] {chip_list}. Outline chips = hairline green border; the FILLED chip uses the CTA gradient. Never more than 4.
-[SECTION 5 — HEADLINE LADDER] three stacked uppercase lines in condensed geometric extra-bold sans,
-lines almost touching (tight leading): line 1 '{ladder[0]}' in faint translucent white rgba(255,255,255,0.30);
-line 2 '{ladder[1]}' in pure white; line 3 '{ladder[2]}' in brand green {T['brand']['green_500_primary']} ending with a full stop. Left-aligned.
-[SECTION 6 — HERO PHOTO, right side] IMAGE 2 worker, golden-hour rim light, shallow depth, faded into the dark on the left.
+[SECTION 5 — HEADLINE LADDER] stacked uppercase lines, condensed geometric extra-bold sans, tight leading,
+left-aligned: '{ladder[0]}' / '{ladder[1]}' / '{ladder[2]}'. Treatment: {ladder_treatment}
+[SECTION 6 — HERO PHOTO] IMAGE 2 worker, golden-hour rim light, shallow depth. {photo_treatment}
 [SECTION 7 — GLASS PROOF CARD] frosted dark glass card, backdrop blur, hairline green border: '{proof}' (gold stars {T['accent']['star']} if a rating). Never over a face.
 [SECTION 8 — ACCENT RULE + BODY] a 4px vertical green rule {T['brand']['green_500_primary']} left of: {' / '.join(body)}.
 [SECTION 9 — MICRO CTA LINE] '{micro}' small, above the button.
-[SECTION 10 — PRIMARY CTA BUTTON] full-width rounded button, gradient {T['gradient']['cta_button']}, soft
-green outer glow, thin light highlight along the top inner edge, white bold centred label '{cta}'. This is the ONLY glowing element.
+[SECTION 10 — PRIMARY CTA] white bold centred label '{cta}', gradient {T['gradient']['cta_button']}, the ONLY
+glowing element on the canvas. Style: {cta_style}
 [SECTION 11 — CONTACT FOOTER] '{L['web']} · {phone}' — phone in heavy numerals, the second-largest element on the canvas.
 
 Keep at least 35% of the canvas empty (silence is part of the luxury). Nothing touches the edges.
@@ -329,7 +341,7 @@ NEGATIVE PROMPT: {negatives}."""
 
     return {
         "prompt": prompt.strip(),
-        "chosen_variant_ids": {},   # deterministic; bandit variant-axes are a later step
+        "chosen_variant_ids": chosen_ids,   # §14.2 style axes — credited by the bandit
         "aspect": spec["aspect"],
         "negative": [negatives],
         "model_hint": "image",

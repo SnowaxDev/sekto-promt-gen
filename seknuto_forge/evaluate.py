@@ -28,6 +28,24 @@ Return STRICT JSON, no prose, no markdown fences, with this shape:
 Deduct hard for any misspelling of Czech words or duplicated elements."""
 
 
+def _parse_json(text: str) -> dict[str, Any] | None:
+    """Best-effort JSON extraction from an LLM reply: strip fences, else grab the outermost
+    {...}. Returns None if nothing parses (caller decides the fallback)."""
+    if not text:
+        return None
+    t = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
+    try:
+        return json.loads(t)
+    except Exception:
+        i, j = t.find("{"), t.rfind("}")
+        if 0 <= i < j:
+            try:
+                return json.loads(t[i:j + 1])
+            except Exception:
+                return None
+    return None
+
+
 def _score_from_checks(score: int, checks: dict[str, bool]) -> float:
     """Blend the model's holistic score with the hard checklist so a single
     misspelling can't slip through on vibes."""
@@ -85,8 +103,11 @@ def critique(image_url: str, mode: str = "B_sluzby") -> dict[str, Any]:
         ]}],
     )
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    text = re.sub(r"^```(json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
-    data = json.loads(text)
+    data = _parse_json(text)
+    if data is None:
+        # a flaky critic response must never crash a refine run — treat as a soft fail
+        return {"auto_score": 0.0, "checks": {}, "hard_fail": True,
+                "defects": ["critic returned an unparseable response — regenerate"]}
     checks = data.get("checks", {})
     defects = [d.strip().lower() for d in data.get("defects", [])]
 
@@ -101,6 +122,44 @@ def critique(image_url: str, mode: str = "B_sluzby") -> dict[str, Any]:
             or not checks.get("no_technical_labels", True)
 
     return {"auto_score": round(auto, 1), "checks": checks, "defects": defects, "hard_fail": hard}
+
+
+STYLE_AXES = {
+    "de_ladder_treatment": "how the 3-tier headline ladder is coloured/weighted",
+    "de_cta_style": "the shape/behaviour of the single glowing CTA button",
+    "de_photo_treatment": "how the hero photo sits in the dark emerald canvas",
+    "de_accent_usage": "whether/how a single yellow accent is used",
+    "de_light_shaft": "the intensity of the one volumetric light shaft",
+}
+
+STYLE_SYS = """You are a senior art director for the SeknuTo.cz "Dark Emerald" design system.
+Invent ONE fresh, professional variation for a single style axis — a NEW look that still obeys
+every locked brand rule (dark emerald canvas, one glowing CTA, at most one yellow, no prices,
+palette greens #1E5A32/#2d8840/#3FA34D/#4FBF5E/#66BB6A only, Czech diacritics intact).
+It must be genuinely different from the existing options, not a paraphrase.
+Return ONE sentence, an imperative visual instruction, no commentary, no quotes."""
+
+
+def propose_style_variant(axis: str, existing: list[str]) -> str | None:
+    """Ask Claude to invent a new in-brand value for a style axis. Returns the text, or None
+    if unavailable/unsafe. Kept short and guarded so discovery never breaks the brand."""
+    import anthropic
+    desc = STYLE_AXES.get(axis, axis)
+    task = ("AXIS: " + desc + "\nEXISTING OPTIONS (do not repeat):\n- "
+            + "\n- ".join(existing) + "\n\nInvent one new option.")
+    try:
+        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        msg = client.messages.create(model=config.CRITIC_MODEL, max_tokens=200,
+                                     system=STYLE_SYS, messages=[{"role": "user", "content": task}])
+        text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+        text = text.strip('"').strip()
+    except Exception:
+        return None
+    low = text.lower()
+    banned = ["kč", "czk", "per m2", "/m2", "price", "cena", "#ff", "#00", "yellow everywhere", "two glow"]
+    if not text or len(text) > 240 or any(b in low for b in banned):
+        return None
+    return text
 
 
 def blend_final(auto_score: float | None, human_score: float | None) -> float | None:

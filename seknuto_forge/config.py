@@ -70,6 +70,15 @@ REFINE_MAX_ITERS = int(os.getenv("REFINE_MAX_ITERS", "3"))
 # Stop early once the auto-critic score reaches this target.
 REFINE_TARGET_SCORE = float(os.getenv("REFINE_TARGET_SCORE", "88"))
 
+# --- Style discovery (Dark Emerald) ---
+# After a good run, let Claude invent a NEW value for a style axis and add it to the pool,
+# so the system explores fresh styles over time (not just the seeded ones). 0 to disable.
+DE_DISCOVER = os.getenv("DE_DISCOVER", "1") not in ("0", "false", "False", "")
+# Cap variants per axis so the style space grows but never explodes.
+DE_MAX_VARIANTS_PER_AXIS = int(os.getenv("DE_MAX_VARIANTS_PER_AXIS", "6"))
+# Only propose a new style after a result at least this good (avoid learning from junk).
+DE_DISCOVER_MIN_SCORE = float(os.getenv("DE_DISCOVER_MIN_SCORE", "78"))
+
 PATTERNS_SEED = DATA_DIR / "patterns.seed.json"
 PATTERNS_LIVE = DATA_DIR / "patterns.json"  # mutable working copy the loop updates
 

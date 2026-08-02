@@ -111,7 +111,33 @@ def refine(variables: dict[str, Any], image_urls: list[str] | None = None,
                 prompt_override = evaluate.improve_prompt(
                     built["prompt"], crit["checks"], crit["defects"], patterns)
 
-    return {"best": best, "history": history, "iterations": len(history)}
+    discovered = _maybe_discover_style(variables, patterns, best)
+    if discovered:
+        knowledge.save_patterns(patterns)
+    return {"best": best, "history": history, "iterations": len(history), "discovered": discovered}
+
+
+def _maybe_discover_style(variables, patterns, best) -> dict[str, Any] | None:
+    """After a good Dark Emerald run, let Claude invent a NEW value for the least-explored
+    style axis and add it to the pool — the system discovers fresh styles, not just the seeds."""
+    if not config.DE_DISCOVER or variables.get("mode") != "dark_emerald" or not best:
+        return None
+    if best.get("hard_fail") or (best.get("final_score") or 0) < config.DE_DISCOVER_MIN_SCORE:
+        return None
+    de_slots = [s for s in patterns["variants"] if s.startswith("de_")]
+    if not de_slots:
+        return None
+    # least-explored axis with room to grow
+    open_slots = [s for s in de_slots if len(patterns["variants"][s]) < config.DE_MAX_VARIANTS_PER_AXIS]
+    if not open_slots:
+        return None
+    axis = min(open_slots, key=lambda s: sum(v["uses"] for v in patterns["variants"][s]))
+    existing = [v["text"] for v in patterns["variants"][axis]]
+    text = evaluate.propose_style_variant(axis, existing)
+    if not text:
+        return None
+    vid = knowledge.add_variant(patterns, axis, text)
+    return {"axis": axis, "id": vid, "text": text} if vid else None
 
 
 def rate(generation_id: str, human_score: float) -> dict[str, Any]:

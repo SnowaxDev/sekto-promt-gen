@@ -202,8 +202,9 @@ function renderRefine(d){
   renderResult(g);
   const hist=(d.history||[]).map(h=>
     `<div class="k">#${h.iter} — skóre <b>${h.score??'—'}</b> ${(h.defects&&h.defects.length)?'· vady: '+h.defects.join(', '):'· bez vad'} · <a href="${h.output_url}" target="_blank">obrázek</a></div>`).join('');
+  const disc=d.discovered?`<div class="k" style="margin-top:10px">🧪 <b>Nový styl objeven</b> (${d.discovered.axis}): <span class="muted">${d.discovered.text}</span><br>Přidán do knihovny — vyzkouší se v příštích generacích.</div>`:'';
   document.getElementById('resultBox').insertAdjacentHTML('beforeend',
-    `<div style="margin-top:16px"><b>Průběh vylepšování (${d.iterations}×)</b>${hist}</div>`);
+    `<div style="margin-top:16px"><b>Průběh vylepšování (${d.iterations}×)</b>${hist}${disc}</div>`);
 }
 
 function checksHtml(c){if(!c)return'';return Object.entries(c).map(([k,v])=>

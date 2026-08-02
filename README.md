@@ -103,6 +103,17 @@ glass components, one glowing CTA) · `A_transformace` (before/after) · `B_sluz
 
 Dark Emerald digital formats: `ig_post` (1:1), `ig_portrait` (4:5), `story` (9:16), `og_banner` (16:9).
 
+## Style discovery (Dark Emerald learns new looks)
+
+The `dark_emerald` mode is not fixed — it has learnable **style axes** (§14.2): `de_ladder_treatment`,
+`de_cta_style`, `de_photo_treatment`, `de_accent_usage`, `de_light_shaft`. A bandit **explores**
+combinations (epsilon-greedy) and **credits** the winners, so the best-scoring look rises to the top
+per axis — visible in `GET /leaderboard`. After a good run (score ≥ `DE_DISCOVER_MIN_SCORE`, no HARD
+FAIL) the system also **invents a brand-new value** for the least-explored axis (Claude, guarded to
+stay in-brand) and adds it to the pool to be tried and judged — the style library grows itself, capped
+at `DE_MAX_VARIANTS_PER_AXIS`. Everything the design system marks LOCKED (§15) stays locked; only the
+sanctioned axes vary, so identity is never broken. Set `DE_DISCOVER=0` to turn invention off.
+
 ## Brand & design system
 
 `docs/DESIGN_SYSTEM.md` is the authoritative **Dark Emerald v3.0** brand identity; its

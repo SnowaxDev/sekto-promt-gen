@@ -53,7 +53,7 @@
 
   "common_misspellings": [
     "Sekame", "Kacime", "Cistime", "Dvur", "Kralove", "Napiste",
-    "Cisteni", "Strihani", "tuji", "cerven", "stromu", "pozemku"
+    "Cisteni", "Strihani", "tuji", "cerven", "stromu", "pozemku", "NOVE"
   ],
 
   "base_negative": [
@@ -94,6 +94,31 @@
     "cta_block": [
       {"id": "cta_gradient", "text": "CTA panel: green gradient #3FA34D to #2d8840 spanning full width. Small caps 'ZAVOLEJTE', then '730 588 372' huge white Montserrat extra-bold, then 'SeknuTo.cz' below.", "uses": 0, "score_sum": 0.0},
       {"id": "cta_forest", "text": "CTA panel: solid dark forest #1e5a32. Small caps 'ZAVOLEJTE', then '730 588 372' huge white heavy sans, then 'SeknuTo.cz' in yellow #FFD54F below.", "uses": 0, "score_sum": 0.0}
+    ],
+
+    "de_ladder_treatment": [
+      {"id": "ghost_white_green", "text": "Line 1 in faint translucent white rgba(255,255,255,0.30), line 2 in pure white, line 3 in brand green #3FA34D — three tiers, ending with a full stop.", "uses": 0, "score_sum": 0.0},
+      {"id": "outline_solid", "text": "Line 1 as a white outline (2px stroke, no fill), line 2 solid brand green #3FA34D — two bold tiers, ending with a full stop.", "uses": 0, "score_sum": 0.0},
+      {"id": "white_green_only", "text": "Line 1 pure white, line 2 brand green #3FA34D — two tiers, very tight leading, ending with a full stop.", "uses": 0, "score_sum": 0.0}
+    ],
+    "de_cta_style": [
+      {"id": "full_width_glow", "text": "Full-width rounded button, green gradient, soft outer glow and a thin top inner highlight.", "uses": 0, "score_sum": 0.0},
+      {"id": "pill_compact", "text": "A compact centred pill button, green gradient with a soft glow, lots of empty space around it.", "uses": 0, "score_sum": 0.0},
+      {"id": "split_two_column", "text": "A two-part action row: the green gradient button on the left (the glowing element), a small 'nebo DM →' text link on the right.", "uses": 0, "score_sum": 0.0}
+    ],
+    "de_photo_treatment": [
+      {"id": "right_cutout_fade", "text": "Hero photo on the right ~42% width, cut out and faded into the dark on the left with a soft gradient mask, no hard edge.", "uses": 0, "score_sum": 0.0},
+      {"id": "full_bleed_scrim", "text": "Hero photo full-bleed behind everything with a strong bottom scrim and a top gradient so text stays legible; brand darkness preserved.", "uses": 0, "score_sum": 0.0},
+      {"id": "no_photo_typographic", "text": "No hero photo — a purely typographic composition; the headline ladder dominates the empty emerald canvas.", "uses": 0, "score_sum": 0.0}
+    ],
+    "de_accent_usage": [
+      {"id": "none", "text": "No yellow anywhere on the canvas.", "uses": 0, "score_sum": 0.0},
+      {"id": "yellow_new_tag", "text": "Exactly one small yellow #FFD54F 'NOVÉ' micro-tag floating above a single service chip — the only yellow element.", "uses": 0, "score_sum": 0.0},
+      {"id": "yellow_campaign_badge", "text": "Exactly one yellow #FFD54F campaign badge with dark green #1E5A32 text — the only yellow element on the canvas.", "uses": 0, "score_sum": 0.0}
+    ],
+    "de_light_shaft": [
+      {"id": "subtle", "text": "Keep the single light shaft subtle and low-opacity.", "uses": 0, "score_sum": 0.0},
+      {"id": "pronounced", "text": "Make the single light shaft a touch more pronounced for drama — still exactly one shaft.", "uses": 0, "score_sum": 0.0}
     ]
   }
 }
