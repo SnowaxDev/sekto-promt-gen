@@ -39,7 +39,9 @@ def build_prompt(variables: dict[str, Any], patterns: dict[str, Any] | None = No
     fmt = variables.get("format", "DL")
     spec = FORMAT_SPECS.get(fmt, FORMAT_SPECS["DL"])
     mode = variables.get("mode", "B_sluzby")
-    uses_photos = variables.get("uses_photos", mode == "A_transformace")
+    # A + B are brand hero-photo modes -> nano-banana-2. Only an explicit
+    # uses_photos=False forces the text-only (ideogram) path.
+    uses_photos = variables.get("uses_photos", mode in ("A_transformace", "B_sluzby"))
     location = variables.get("location", L["region"])
     headline = variables.get("service_headline", L["hero_headline"])
     show_qr = fmt not in ("banner_horizontal", "banner_vertical")

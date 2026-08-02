@@ -21,17 +21,20 @@ def generate(built: dict[str, Any], image_urls: list[str] | None = None,
 
     client = replicate.Client(api_token=config.REPLICATE_API_TOKEN)
 
-    if built["model_hint"] == "image" and image_urls:
-        model = config.IMAGE_MODEL
+    if built["model_hint"] == "image":
+        model = config.IMAGE_MODEL  # google/nano-banana-2
         params = {
             "prompt": built["prompt"],
-            "image_input": image_urls,
             "aspect_ratio": built["aspect"],
-            "resolution": resolution,
+            "resolution": resolution,        # 4K
             "google_search": True,
             "image_search": True,
-            "output_format": output_format,
+            "output_format": output_format,  # jpg
         }
+        # image_input is optional (schema default []); only send it when we
+        # actually have reference URLs, otherwise let nano-banana use its default.
+        if image_urls:
+            params["image_input"] = image_urls
     else:
         model = config.IMAGE_MODEL_TEXT
         params = {
