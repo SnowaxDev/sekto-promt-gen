@@ -10,6 +10,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
 
+# Load a local .env automatically so `python -m uvicorn ...` / run.bat / the CLI
+# all pick up keys on any OS (Windows PowerShell doesn't source .env by itself).
+# Optional dependency: if python-dotenv isn't installed we fall back to a tiny
+# built-in parser so the app still reads .env with zero extra installs.
+def _load_env(path: Path) -> None:
+    try:
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv(path)
+        return
+    except Exception:
+        pass
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip().strip('"').strip("'")
+        os.environ.setdefault(key, val)  # real env vars win over .env
+
+_load_env(ROOT / ".env")
+
 # --- API keys (set in .env or environment) ---
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
