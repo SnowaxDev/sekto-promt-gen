@@ -103,6 +103,18 @@ glass components, one glowing CTA) · `A_transformace` (before/after) · `B_sluz
 
 Dark Emerald digital formats: `ig_post` (1:1), `ig_portrait` (4:5), `story` (9:16), `og_banner` (16:9).
 
+## Local asset library, task queue & build blocks
+
+- **Everything saves to your PC.** Each generation is downloaded to `outputs/<date>/` — the
+  image plus a JSON sidecar (prompt, scores, defects, series info). Nothing depends on
+  expiring Replicate URLs, the archive doubles as the learning dataset, and the **Soubory**
+  tab lists it all with download links. Disable via `SAVE_OUTPUTS=0`.
+- **Task manager** (`POST /task`, `GET /tasks`): a persistent queue — jobs (generate / refine /
+  series) run sequentially in a worker; watch statuses live in the **Automat** tab.
+- **Build blocks** (`/blocks`): save the current form as a named recipe and re-run it in one
+  click (or via the queue). Blocks are the safe automation primitive — they can only drive the
+  brand-locked pipeline, never arbitrary code.
+
 ## Content series / campaigns (connected, consistent posts)
 
 `POST /series` (button **🎞️ Vygenerovat sérii**) generates a cohesive set — e.g. an IG carousel.

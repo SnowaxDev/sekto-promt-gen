@@ -15,11 +15,16 @@ from typing import Any, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
-from . import chassis, learn, store, knowledge, intent
+from . import chassis, learn, store, knowledge, intent, tasks, blocks, assets, config
 
 app = FastAPI(title="SeknuTo Forge", version="1.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# local asset library (outputs/ on the user's PC) served for the Soubory panel
+config.OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/outputs", StaticFiles(directory=str(config.OUTPUTS_DIR)), name="outputs")
 
 _UI = Path(__file__).resolve().parent.parent / "webui" / "index.html"
 
@@ -198,3 +203,73 @@ def edit_variant(req: VariantReq):
 @app.get("/usage")
 def usage():
     return learn.usage_stats()
+
+
+class TaskReq(BaseModel):
+    kind: str                       # generate | refine | series
+    variables: dict = {}
+    image_urls: list[str] = []
+    count: int = 3
+    auto_evaluate: bool = True
+    prompt_override: Optional[str] = None
+
+
+class BlockReq(BaseModel):
+    name: str
+    kind: str                       # generate | refine | series
+    variables: dict = {}
+    image_urls: list[str] = []
+    count: int = 3
+    prompt_override: Optional[str] = None
+
+
+@app.get("/files")
+def files():
+    """Everything saved locally in outputs/ (image + metadata), newest first."""
+    return assets.list_files()
+
+
+@app.post("/task")
+def create_task(req: TaskReq):
+    """Queue a job; the worker runs jobs sequentially. Watch progress via GET /tasks."""
+    try:
+        return tasks.create(req.kind, {"variables": req.variables, "image_urls": req.image_urls,
+                                       "count": req.count, "auto_evaluate": req.auto_evaluate,
+                                       "prompt_override": req.prompt_override})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/tasks")
+def get_tasks():
+    return tasks.list_tasks()
+
+
+@app.get("/blocks")
+def get_blocks():
+    return blocks.list_blocks()
+
+
+@app.post("/blocks")
+def add_block(req: BlockReq):
+    try:
+        return blocks.add(req.name, req.kind, {"variables": req.variables,
+                                               "image_urls": req.image_urls, "count": req.count,
+                                               "prompt_override": req.prompt_override})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/blocks/{bid}")
+def del_block(bid: str):
+    if not blocks.delete(bid):
+        raise HTTPException(status_code=404, detail="block not found")
+    return {"ok": True}
+
+
+@app.post("/blocks/{bid}/run")
+def run_block(bid: str):
+    t = blocks.run(bid)
+    if not t:
+        raise HTTPException(status_code=404, detail="block not found")
+    return t

@@ -79,6 +79,13 @@ DE_MAX_VARIANTS_PER_AXIS = int(os.getenv("DE_MAX_VARIANTS_PER_AXIS", "6"))
 # Only propose a new style after a result at least this good (avoid learning from junk).
 DE_DISCOVER_MIN_SCORE = float(os.getenv("DE_DISCOVER_MIN_SCORE", "78"))
 
+# --- Local asset library ---
+# Every generation is downloaded into outputs/<date>/ (image + JSON sidecar with prompt,
+# scores, defects) so results live on your PC, not only on expiring Replicate URLs.
+# The sidecars double as the learning archive. Set SAVE_OUTPUTS=0 to disable.
+SAVE_OUTPUTS = os.getenv("SAVE_OUTPUTS", "1") not in ("0", "false", "False", "")
+OUTPUTS_DIR = ROOT / "outputs"
+
 # --- Cost estimates (USD) for the usage panel — rough, override to match your Replicate plan ---
 COST_IMAGE = float(os.getenv("COST_IMAGE", "0.06"))        # nano-banana-2 render (approx)
 COST_IMAGE_TEXT = float(os.getenv("COST_IMAGE_TEXT", "0.08"))  # ideogram render (approx)

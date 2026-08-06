@@ -5,37 +5,55 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>SeknuTo Forge</title>
 <style>
-  :root{--g:#3FA34D;--gd:#2d8840;--forest:#1e5a32;--y:#FFD54F;--ink:#1a1a1a;--mut:#666;--bg:#f4f5f2;--line:#e2e5df}
+  :root{--g:#3FA34D;--gd:#2d8840;--forest:#1e5a32;--bright:#4FBF5E;--y:#FFD54F;--ink:#fff;
+    --mut:rgba(255,255,255,.65);--dim:rgba(255,255,255,.4);--line:rgba(255,255,255,.12);
+    --card:rgba(10,31,20,.82);--field:rgba(6,13,9,.55)}
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:var(--forest);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:12px}
-  header .dot{width:30px;height:30px;border-radius:8px;background:var(--g);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
-  header b{font-size:18px}header span{color:#bfe0c7;font-size:13px}
-  main{max-width:1120px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:380px 1fr;gap:20px}
-  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;color:var(--ink);
+    background:radial-gradient(120% 90% at 72% 8%,#17422A 0%,#0F2C1C 42%,#0A1F14 70%,#060D09 100%) fixed}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:46px 46px}
+  header,main{position:relative;z-index:1}
+  header{background:rgba(6,13,9,.85);border-bottom:1px solid var(--line);color:#fff;padding:14px 22px;
+    display:flex;align-items:center;gap:12px;backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+  header .dot{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--bright),var(--forest));
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;box-shadow:0 0 24px rgba(63,163,77,.4)}
+  header b{font-size:18px}header span{color:#86d492;font-size:13px}
+  main{max-width:1200px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:380px 1fr;gap:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:blur(4px)}
   h2{font-size:15px;margin:0 0 12px}
   label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
-  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;
+    font:inherit;background:var(--field);color:var(--ink)}
+  input::placeholder,textarea::placeholder{color:var(--dim)}
+  select option{background:#0A1F14;color:#fff}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g)}
   textarea{min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
   .row{display:flex;gap:8px}.row>*{flex:1}
-  button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px;font-weight:600;font:inherit}
-  .primary{background:var(--g);color:#fff}.primary:hover{background:var(--gd)}
-  .ghost{background:#fff;border:1px solid var(--line)}
+  button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:600;font:inherit}
+  .primary{background:linear-gradient(135deg,var(--bright),var(--g) 45%,var(--gd));color:#fff;
+    box-shadow:0 0 28px rgba(63,163,77,.35)}.primary:hover{filter:brightness(1.1)}
+  .ghost{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
+  .ghost:hover{background:rgba(255,255,255,.1)}
   .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-  .tab{padding:7px 12px;border:1px solid var(--line);border-radius:20px;background:#fff;font-size:13px;cursor:pointer}
+  .tab{padding:7px 12px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.04);
+    font-size:13px;cursor:pointer;color:var(--mut)}
   .tab.on{background:var(--forest);color:#fff;border-color:var(--forest)}
   .muted{color:var(--mut);font-size:12px}
   .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600}
-  .ok{background:#e7f4ea;color:var(--gd)}.bad{background:#fbe4e4;color:#b42318}
+  .ok{background:rgba(63,163,77,.18);color:#86d492}.bad{background:rgba(211,47,47,.22);color:#ff8a80}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-  .thumb{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
-  .thumb img{width:100%;height:150px;object-fit:cover;background:#eee}
+  .thumb{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+  .thumb img{width:100%;height:150px;object-fit:cover;background:#0A1F14}
   .thumb .p{padding:8px}
   .score{font-weight:800;font-size:20px}
   .pill{display:inline-block;background:var(--y);color:var(--forest);border-radius:8px;padding:2px 8px;font-weight:700;font-size:12px}
-  pre{white-space:pre-wrap;word-break:break-word;background:#f7f8f5;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;max-height:340px;overflow:auto}
+  pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.35);border:1px solid var(--line);
+    border-radius:10px;padding:10px;font-size:12px;max-height:340px;overflow:auto;color:#d9efe0}
   .hide{display:none}
   .k{font-size:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+  a{color:#86d492}
   @media(max-width:860px){main{grid-template-columns:1fr}}
 </style>
 </head>
@@ -97,6 +115,7 @@
       <input type="number" id="seriesCount" min="1" max="8" value="4" style="max-width:70px" title="počet příspěvků v sérii"/>
       <button class="ghost" style="flex:2" onclick="series()">🎞️ Vygenerovat sérii (provázaný obsah)</button>
     </div>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="saveBlock()">🧱 Uložit formulář jako blok (recept)</button>
     <p class="muted" id="status" style="margin-top:10px"></p>
   </section>
 
@@ -108,6 +127,8 @@
       <div class="tab" data-t="gallery" onclick="tab('gallery');loadGallery()">Galerie</div>
       <div class="tab" data-t="board" onclick="tab('board');loadBoard()">Leaderboard</div>
       <div class="tab" data-t="know" onclick="tab('know');loadKnow()">Znalosti</div>
+      <div class="tab" data-t="auto" onclick="tab('auto');loadAuto()">Automat</div>
+      <div class="tab" data-t="files" onclick="tab('files');loadFiles()">Soubory</div>
     </div>
 
     <div class="card pane" id="pane-prompt">
@@ -134,6 +155,20 @@
     <div class="card pane hide" id="pane-know">
       <h2>Failure log + negativní termíny</h2>
       <div id="knowOut" class="muted"></div>
+    </div>
+
+    <div class="card pane hide" id="pane-auto">
+      <h2>Automat — bloky &amp; fronta úkolů</h2>
+      <p class="muted" id="autoUsage"></p>
+      <b style="font-size:13px">🧱 Bloky (uložené recepty)</b>
+      <div id="blocksOut"></div>
+      <b style="display:block;margin-top:14px;font-size:13px">🗂 Fronta úkolů <span class="muted" style="font-weight:400">· běží postupně, obnovuje se živě</span></b>
+      <div id="tasksOut"></div>
+    </div>
+
+    <div class="card pane hide" id="pane-files">
+      <h2>Soubory na PC <span class="muted" style="font-weight:400">· vše se automaticky ukládá do složky outputs/ v projektu</span></h2>
+      <div class="grid" id="filesGrid"></div>
     </div>
   </section>
 </main>
@@ -311,6 +346,59 @@ async function loadKnow(){
   document.getElementById('knowOut').innerHTML=
     '<b>Failure log</b>'+k.failure_log.map(f=>`<div class="k">${f.id} — ${f.symptom} <span class="muted">→ ${f.fix}</span></div>`).join('')
     +'<b style="display:block;margin-top:10px">Negative</b><p class="muted">'+k.base_negative.join(', ')+'</p>';
+}
+/* --- Automat: bloky (recepty) + fronta úkolů --- */
+function urlImgs(){return document.getElementById('images').value.split(',').map(s=>s.trim()).filter(Boolean);}
+async function saveBlock(){
+  const name=window.prompt('Název bloku:'); if(!name)return;
+  const kind=(window.prompt('Typ bloku — generate / refine / series:','generate')||'generate').trim();
+  const count=parseInt(document.getElementById('seriesCount').value)||3;
+  const r=await fetch(API+'/blocks',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,kind,variables:vars(),image_urls:urlImgs(),count})});
+  setStatus(r.ok?'Blok uložen 🧱 (viz tab Automat)':'Chyba: '+(await r.text()));
+}
+async function runBlock(id){
+  const r=await fetch(API+'/blocks/'+id+'/run',{method:'POST'});
+  setStatus(r.ok?'Zařazeno do fronty ▶':'Chyba spuštění bloku'); loadAuto();
+}
+async function delBlock(id){await fetch(API+'/blocks/'+id,{method:'DELETE'});loadAuto();}
+function tBadge(s){return s==='done'?'ok':(s==='error'?'bad':'');}
+function renderTasks(t){
+  document.getElementById('tasksOut').innerHTML=t.length?t.map(x=>{
+    const res=x.result||{};
+    let extra='';
+    if(x.status==='done'){
+      if(res.score!=null)extra+=` · skóre <b>${Math.round(res.score)}</b>`;
+      if(res.series_id)extra+=` · série ${res.count}×`;
+      if(res.local_path)extra+=` · <span class="muted">${res.local_path}</span>`;
+    }else if(x.error){extra=` · <span class="badge bad">${x.error}</span>`;}
+    return `<div class="k"><b>${x.kind}</b> <span class="badge ${tBadge(x.status)}">${x.status}</span>${extra}</div>`;
+  }).join(''):'<p class="muted">Fronta je prázdná — spusť blok nebo přidej úkol přes POST /task.</p>';
+}
+async function loadAuto(){
+  const [u,b,t]=await Promise.all(['/usage','/blocks','/tasks'].map(p=>fetch(API+p).then(r=>r.json())));
+  document.getElementById('autoUsage').innerHTML=
+    `Generací: <b>${u.generations}</b> · ⌀ skóre: <b>${u.avg_score??'—'}</b> · hodnoceno: <b>${u.rated}</b> · odhad nákladů: <b>$${u.est_cost_usd}</b>`;
+  document.getElementById('blocksOut').innerHTML=b.length?b.map(x=>
+    `<div class="k">🧱 <b>${x.name}</b> <span class="muted">${x.kind}${x.payload&&x.payload.variables?(' · '+(x.payload.variables.mode||'')+' · '+(x.payload.variables.format||'')):''}</span>
+      <span style="float:right"><button class="ghost" style="padding:3px 8px" onclick="runBlock('${x.id}')">▶ Spustit</button>
+      <button class="ghost" style="padding:3px 8px" onclick="delBlock('${x.id}')">🗑</button></span></div>`).join('')
+    :'<p class="muted">Žádné bloky — vyplň formulář vlevo a dej „Uložit formulář jako blok".</p>';
+  renderTasks(t);
+  if(window._autoT)clearInterval(window._autoT);
+  window._autoT=setInterval(async()=>{
+    if(document.getElementById('pane-auto').classList.contains('hide'))return;
+    renderTasks(await fetch(API+'/tasks').then(r=>r.json()));
+  },4000);
+}
+/* --- Soubory: lokální knihovna outputs/ --- */
+async function loadFiles(){
+  const f=await fetch(API+'/files').then(r=>r.json());
+  document.getElementById('filesGrid').innerHTML=f.length?f.map(x=>
+    `<div class="thumb"><img src="${x.url}" loading="lazy"/><div class="p"><b>${x.format||''}</b> <span class="muted">${x.mode||''}</span>${x.series_id?' <span class="badge ok">série</span>':''}<br>
+     <span class="score" style="font-size:16px">${x.score!=null?Math.round(x.score):'—'}</span>
+     <a class="ghost" style="float:right;padding:4px 8px;border-radius:8px;text-decoration:none" href="${x.url}" download>⬇</a></div></div>`).join('')
+    :'<p class="muted">Zatím nic — každá generace se sem ukládá automaticky (obrázek + metadata).</p>';
 }
 toggleDE();
 </script>

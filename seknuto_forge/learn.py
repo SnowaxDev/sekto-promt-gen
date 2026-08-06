@@ -8,7 +8,7 @@ leaderboard(): which prompt variants are winning
 from __future__ import annotations
 import uuid
 from typing import Any
-from . import chassis, generate, evaluate, knowledge, store, config
+from . import chassis, generate, evaluate, knowledge, store, config, assets
 
 
 def run_once(variables: dict[str, Any], image_urls: list[str] | None = None,
@@ -44,6 +44,10 @@ def run_once(variables: dict[str, Any], image_urls: list[str] | None = None,
         knowledge.save_patterns(patterns)
 
     rec["_id"] = _id
+    lp = assets.save_generation(rec)          # download to outputs/ on the user's PC
+    if lp:
+        db.update(_id, {"local_path": lp})
+        rec["local_path"] = lp
     return rec
 
 
@@ -91,6 +95,10 @@ def refine(variables: dict[str, Any], image_urls: list[str] | None = None,
 
         _id = db.insert(rec)
         rec["_id"] = _id
+        lp = assets.save_generation(rec)
+        if lp:
+            db.update(_id, {"local_path": lp})
+            rec["local_path"] = lp
         knowledge.credit_variants(patterns, built["chosen_variant_ids"], rec["final_score"])
         _auto_promote(patterns, db)
         knowledge.save_patterns(patterns)
@@ -196,6 +204,10 @@ def series(variables: dict[str, Any], image_urls: list[str] | None = None, count
             rec["final_score"] = evaluate.blend_final(crit["auto_score"], None)
         _id = db.insert(rec)
         rec["_id"] = _id
+        lp = assets.save_generation(rec)
+        if lp:
+            db.update(_id, {"local_path": lp})
+            rec["local_path"] = lp
         if rec.get("final_score") is not None:
             knowledge.credit_variants(patterns, built["chosen_variant_ids"], rec["final_score"])
         slides.append({"slide": idx + 1, "role": override.get("series_role"), "id": _id,
@@ -225,6 +237,7 @@ def rate(generation_id: str, human_score: float) -> dict[str, Any]:
     _adjust_variant_credit(patterns, rec["chosen_variant_ids"], new, +1)
 
     db.update(generation_id, {"human_score": human_score, "final_score": new})
+    assets.update_sidecar(generation_id, {"human_score": human_score, "final_score": new})
     _auto_promote(patterns, db)
     knowledge.save_patterns(patterns)
     rec.update(human_score=human_score, final_score=new)
