@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
-from . import chassis, learn, store, knowledge
+from . import chassis, learn, store, knowledge, intent
 
 app = FastAPI(title="SeknuTo Forge", version="1.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -72,9 +72,34 @@ def _vars(v: Variables) -> dict[str, Any]:
     return {k: val for k, val in v.model_dump().items() if val is not None}
 
 
+class BriefReq(BaseModel):
+    brief: str
+    action: str = "plan"           # "plan" (cost 0), "generate", or "series"
+    image_urls: list[str] = []
+    auto_evaluate: bool = True
+
+
 @app.post("/prompt")
 def preview_prompt(v: Variables):
     return chassis.build_prompt(_vars(v))
+
+
+@app.post("/brief")
+def brief(req: BriefReq):
+    """Free-text brief -> brand-locked plan (+ prompt preview). Optionally generate / make a series."""
+    try:
+        plan = intent.interpret(req.brief)
+        built = chassis.build_prompt(plan)
+        out = {"variables": plan, "prompt": built["prompt"], "aspect": built["aspect"],
+               "model_hint": built["model_hint"], "show_qr": built["show_qr"]}
+        if req.action == "series" or (req.action == "generate" and plan.get("series")):
+            out["series"] = learn.series(plan, req.image_urls or None, plan.get("count", 3),
+                                         None, req.auto_evaluate)
+        elif req.action == "generate":
+            out["generation"] = learn.run_once(plan, req.image_urls or None, req.auto_evaluate)
+        return out
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @app.post("/generate")

@@ -49,6 +49,9 @@
   <!-- LEFT: build form -->
   <section class="card">
     <h2>Vytvořit materiál</h2>
+    <label>🧠 Napiš, co chceš vytvořit — systém to naplánuje z knowledge</label>
+    <textarea id="brief" style="min-height:56px" placeholder="např. nábor story do týmu s důrazem na kácení · A3 plakát na sekání trávy · carousel o pravidelné údržbě"></textarea>
+    <button class="primary" style="width:100%;margin:6px 0 10px" onclick="planBrief()">🧠 Naplánuj z popisu</button>
     <label>Formát</label>
     <select id="format">
       <optgroup label="Dark Emerald (digital)">
@@ -166,6 +169,29 @@ function tab(t){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle(
   document.getElementById('pane-'+t).classList.remove('hide');}
 function setStatus(s){document.getElementById('status').textContent=s;}
 
+async function planBrief(){
+  const b=document.getElementById('brief').value.trim();
+  if(!b){setStatus('Napiš, co chceš vytvořit.');return;}
+  setStatus('🧠 Plánuji z popisu podle knowledge…');
+  try{
+    const r=await fetch(API+'/brief',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brief:b,action:'plan'})});
+    if(!r.ok){setStatus('Chyba: '+(await r.text()));return;}
+    const d=await r.json(); applyPlan(d.variables); lastPrompt=d.prompt;
+    document.getElementById('promptOut').textContent=d.prompt;
+    document.getElementById('promptMeta').textContent=`plán: ${d.variables.mode} · ${d.variables.format}`+(d.variables.series?` · série ${d.variables.count}×`:'')+` · aspect ${d.aspect} · QR ${d.show_qr}`;
+    tab('prompt'); setStatus('Naplánováno ✓ Zkontroluj pole vlevo a dej Vygenerovat / Sérii.');
+  }catch(e){setStatus('Chyba sítě: '+e.message);}
+}
+function applyPlan(v){
+  if(!v)return;
+  if(v.format)document.getElementById('format').value=v.format;
+  if(v.mode){document.getElementById('mode').value=v.mode; toggleDE();}
+  if(v.location)document.getElementById('location').value=v.location;
+  if(v.service_headline)document.getElementById('headline').value=v.service_headline;
+  const lad=document.getElementById('ladder'); if(lad&&v.ladder)lad.value=(v.ladder||[]).join(', ');
+  const ch=document.getElementById('chips'); if(ch&&v.chips)ch.value=(v.chips||[]).join(', ');
+  if(v.count)document.getElementById('seriesCount').value=v.count;
+}
 async function preview(){
   setStatus('Sestavuji prompt…');
   const r=await fetch(API+'/prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(vars())});
