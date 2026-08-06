@@ -55,7 +55,10 @@ Do NOT hardcode phrasing inside `chassis.py` — chassis assembles, `variants` s
 - Change one thing at a time; after editing `chassis.py` run `python -m seknuto_forge.cli prompt ...` to verify the prompt still assembles.
 - If you add a new rendered Czech word anywhere, add its breakdown to `patterns → diacritics` and its common misspelling to `common_misspellings` in the same change.
 - Never remove a brand rule to satisfy a request. If a request conflicts with the rules above, surface the conflict instead of silently breaking a rule.
-- Keep the web UI a single dependency-free file. No React/build tooling in this repo.
+- Keep `webui/index.html` a single dependency-free file (this is what `make run` serves; no
+  build step). As of the workspace decision, there is ALSO an optional richer front-end in
+  `webui-app/` (Vite + React + TypeScript + Tailwind + shadcn-style) — that one may use build
+  tooling and npm. The vanilla file must keep working on its own; the React app is additive.
 
 ## Files
 `chassis.py` assemble · `knowledge.py` patterns+bandit · `generate.py` Replicate ·

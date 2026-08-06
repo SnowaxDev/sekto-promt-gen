@@ -12,9 +12,11 @@ from . import chassis, generate, evaluate, knowledge, store, config
 
 
 def run_once(variables: dict[str, Any], image_urls: list[str] | None = None,
-             auto_evaluate: bool = True) -> dict[str, Any]:
+             auto_evaluate: bool = True, prompt_override: str | None = None) -> dict[str, Any]:
     patterns = knowledge.load_patterns()
     built = chassis.build_prompt(variables, patterns)
+    if prompt_override:   # hand-edited prompt from the workspace
+        built["prompt"] = prompt_override
 
     gen = generate.generate(built, image_urls=image_urls)
 
@@ -254,6 +256,34 @@ def retrieve(variables: dict[str, Any]) -> dict[str, Any] | None:
     if not cand:
         return None
     return max(cand, key=lambda g: g["final_score"])
+
+
+def usage_stats() -> dict[str, Any]:
+    """Aggregate the generation log for the workspace usage/credits panel: counts, cost estimate
+    (rough — see config COST_*), score trend, and per mode/format breakdown."""
+    gens = sorted(store.get_store().all(), key=lambda g: g.get("ts", 0))
+    n = len(gens)
+    scored = [g["final_score"] for g in gens if g.get("final_score") is not None]
+    est = 0.0
+    by_mode: dict[str, int] = {}
+    by_format: dict[str, int] = {}
+    for g in gens:
+        model = (g.get("model") or "")
+        est += config.COST_IMAGE_TEXT if "ideogram" in model else config.COST_IMAGE
+        if g.get("auto_score") is not None:
+            est += config.COST_CRITIQUE
+        by_mode[g.get("mode") or "?"] = by_mode.get(g.get("mode") or "?", 0) + 1
+        by_format[g.get("format") or "?"] = by_format.get(g.get("format") or "?", 0) + 1
+    return {
+        "generations": n,
+        "avg_score": round(sum(scored) / len(scored), 1) if scored else None,
+        "rated": sum(1 for g in gens if g.get("human_score") is not None),
+        "est_cost_usd": round(est, 2),
+        "by_mode": by_mode,
+        "by_format": by_format,
+        "score_trend": [{"ts": g.get("ts"), "score": g.get("final_score")}
+                        for g in gens if g.get("final_score") is not None][-50:],
+    }
 
 
 def leaderboard() -> dict[str, list[dict]]:

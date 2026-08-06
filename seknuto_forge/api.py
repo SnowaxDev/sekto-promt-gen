@@ -47,6 +47,14 @@ class GenerateReq(BaseModel):
     variables: Variables
     image_urls: list[str] = []
     auto_evaluate: bool = True
+    prompt_override: Optional[str] = None   # hand-edited prompt from the workspace
+
+
+class VariantReq(BaseModel):
+    action: str            # "add" | "edit" | "delete"
+    slot: str
+    id: Optional[str] = None
+    text: Optional[str] = None
 
 
 class RefineReq(BaseModel):
@@ -105,7 +113,8 @@ def brief(req: BriefReq):
 @app.post("/generate")
 def generate(req: GenerateReq):
     try:
-        return learn.run_once(_vars(req.variables), req.image_urls or None, req.auto_evaluate)
+        return learn.run_once(_vars(req.variables), req.image_urls or None,
+                              req.auto_evaluate, req.prompt_override)
     except Exception as e:  # surface Replicate/Anthropic errors cleanly
         raise HTTPException(status_code=502, detail=str(e))
 
@@ -156,3 +165,36 @@ def generations():
 def get_knowledge():
     p = knowledge.load_patterns()
     return {"failure_log": p["failure_log"], "base_negative": p["base_negative"]}
+
+
+@app.get("/patterns")
+def get_patterns():
+    """Full learnable state for the workspace knowledge editor."""
+    p = knowledge.load_patterns()
+    return {"variants": p["variants"], "banks": knowledge.load_design().get("banks", {}),
+            "failure_log": p["failure_log"], "base_negative": p["base_negative"],
+            "locked_strings": p["locked_strings"], "colors": p["colors"]}
+
+
+@app.post("/variant")
+def edit_variant(req: VariantReq):
+    """Live-edit the knowledge DB: add / edit / delete a prompt variant, persisted to disk."""
+    p = knowledge.load_patterns()
+    if req.action == "add":
+        vid = knowledge.add_variant(p, req.slot, req.text or "", cap=False)
+        ok = vid is not None
+    elif req.action == "edit":
+        ok = knowledge.edit_variant(p, req.slot, req.id or "", req.text or "")
+    elif req.action == "delete":
+        ok = knowledge.delete_variant(p, req.slot, req.id or "")
+    else:
+        raise HTTPException(status_code=400, detail="action must be add|edit|delete")
+    if not ok:
+        raise HTTPException(status_code=400, detail="edit rejected (missing/duplicate/last-in-slot)")
+    knowledge.save_patterns(p)
+    return {"ok": True, "slot": req.slot, "variants": p["variants"].get(req.slot, [])}
+
+
+@app.get("/usage")
+def usage():
+    return learn.usage_stats()

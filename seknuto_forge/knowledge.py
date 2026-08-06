@@ -106,20 +106,39 @@ def credit_variants(patterns: dict[str, Any], chosen_ids: dict[str, str], score:
                 break
 
 
-def add_variant(patterns: dict[str, Any], slot: str, text: str) -> str | None:
-    """Append a newly-discovered variant to a slot (deduped, capped). Returns its id or None.
-    New variants start unseen (optimistic prior) so the bandit will try them before judging."""
+def add_variant(patterns: dict[str, Any], slot: str, text: str, cap: bool = True) -> str | None:
+    """Append a variant to a slot (deduped; capped for auto-discovery, uncapped for manual edits).
+    New variants start unseen (optimistic prior) so the bandit tries them before judging."""
     text = (text or "").strip()
     pool = patterns["variants"].get(slot)
     if not text or pool is None:
         return None
-    if len(pool) >= config.DE_MAX_VARIANTS_PER_AXIS:
+    if cap and len(pool) >= config.DE_MAX_VARIANTS_PER_AXIS:
         return None
     if any(v["text"].strip().lower() == text.lower() for v in pool):
         return None
-    vid = f"{slot}_disc_{int(time.time())}_{len(pool)}"
+    vid = f"{slot}_{'disc' if cap else 'man'}_{int(time.time())}_{len(pool)}"
     pool.append({"id": vid, "text": text, "uses": 0, "score_sum": 0.0})
     return vid
+
+
+def edit_variant(patterns: dict[str, Any], slot: str, vid: str, text: str) -> bool:
+    """Rewrite an existing variant's text (manual knowledge editing)."""
+    for v in patterns["variants"].get(slot, []):
+        if v["id"] == vid:
+            v["text"] = (text or "").strip()
+            return True
+    return False
+
+
+def delete_variant(patterns: dict[str, Any], slot: str, vid: str) -> bool:
+    """Remove a variant from a slot. Refuses to empty a slot (a slot needs >=1 option)."""
+    pool = patterns["variants"].get(slot)
+    if not pool or len(pool) <= 1:
+        return False
+    n = len(pool)
+    pool[:] = [v for v in pool if v["id"] != vid]
+    return len(pool) < n
 
 
 def maybe_promote_defect(patterns: dict[str, Any], recent_defects: list[str]) -> list[str]:

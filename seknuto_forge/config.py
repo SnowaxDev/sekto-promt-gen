@@ -79,6 +79,11 @@ DE_MAX_VARIANTS_PER_AXIS = int(os.getenv("DE_MAX_VARIANTS_PER_AXIS", "6"))
 # Only propose a new style after a result at least this good (avoid learning from junk).
 DE_DISCOVER_MIN_SCORE = float(os.getenv("DE_DISCOVER_MIN_SCORE", "78"))
 
+# --- Cost estimates (USD) for the usage panel — rough, override to match your Replicate plan ---
+COST_IMAGE = float(os.getenv("COST_IMAGE", "0.06"))        # nano-banana-2 render (approx)
+COST_IMAGE_TEXT = float(os.getenv("COST_IMAGE_TEXT", "0.08"))  # ideogram render (approx)
+COST_CRITIQUE = float(os.getenv("COST_CRITIQUE", "0.01"))  # one vision critique (approx)
+
 PATTERNS_SEED = DATA_DIR / "patterns.seed.json"
 PATTERNS_LIVE = DATA_DIR / "patterns.json"  # mutable working copy the loop updates
 
